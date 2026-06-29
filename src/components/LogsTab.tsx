@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Search, Download, AlertTriangle, RefreshCw, Lock, Unlock, LogIn, LogOut, Truck, Sparkles, User, CheckCircle, Database, Users } from 'lucide-react';
 import { LogItem, AccessType, Persona, ActiveCheckIn } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
+import { csvDownload } from '../utils/csv';
 
 interface LogsTabProps {
   logs: LogItem[];
@@ -65,7 +66,8 @@ export function LogsTab({
     return true;
   });
 
-  // Client-side CSV Exporter for pre-registered list showing status, date & time
+  // Client-side CSV Exporter for pre-registered list showing status, date & time.
+  // csvDownload ya se encarga del escape RFC 4180, BOM UTF-8 y revocación del object URL.
   const handleExportCSV = () => {
     try {
       const headers = ['Fecha', 'Hora', 'Estado / Movimiento', 'Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente'];
@@ -81,24 +83,15 @@ export function LogsTab({
           lastLog ? lastLog.date : 'N/A',
           lastLog ? lastLog.time : 'N/A',
           isCurrentlyInside ? 'EN RECINTO (Entrada)' : 'FUERA (Salida)',
-          (p.name ?? '').replace(/,/g, ''),
+          p.name ?? '',
           p.rut,
           p.type,
-          (p.unit ?? '').replace(/,/g, ''),
+          p.unit ?? '',
           p.plate || 'N/A'
         ];
       });
 
-      const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `SecurGuard-PreRegistrosYEstados-${getLocalDateISO()}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      csvDownload([headers, ...rows], `SecurGuard-PreRegistrosYEstados-${getLocalDateISO()}.csv`);
     } catch (e) {
       alert('Error exportando directorio pre-registro CSV.');
     }

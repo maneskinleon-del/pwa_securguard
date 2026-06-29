@@ -8,6 +8,7 @@ import { Upload, Download, Trash2, Camera, ShieldAlert, BarChart2, Users, Flame,
 import { LogItem, Persona, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { openEntryIds, isEntryStillOpen, formatDurationFromMs } from '../utils/report';
+import { csvRow, csvBlob } from '../utils/csv';
 
 interface PersonasTabProps {
   logs: LogItem[];
@@ -64,31 +65,33 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
         `Personas Actualmente en Recinto:,${activeInside.length}`,
         ``,
         `--- ESTADO ACTUAL DEL RECINTO (Solo personas presentes) ---`
-      ].join('\n');
+      ].join('\r\n');
 
       // Sección consolidada: SOLO personas físicamente presentes.
+      // RFC 4180: csvRow escapa comas/comillas/saltos de línea automáticamente,
+      // así que ya no necesitamos .replace(/,/g, '') sobre los nombres.
       const presentHeaders = ['Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Hora Entrada', 'Permanencia'];
       const presentRows = activeInside.map(s => [
-        (s.name ?? '').replace(/,/g, ''),
+        s.name ?? '',
         s.rut,
         s.type,
-        (s.unit ?? '').replace(/,/g, ''),
+        s.unit ?? '',
         s.plate || 'N/A',
         s.entryTime,
         s.entryTimestamp ? formatDurationFromMs(Date.now() - s.entryTimestamp) : 'N/A'
       ]);
       const presentContent = presentRows.length > 0
-        ? [presentHeaders.join(','), ...presentRows.map(e => e.join(','))].join('\n')
+        ? [csvRow(presentHeaders), ...presentRows.map(csvRow)].join('\r\n')
         : 'Sin personas en el recinto en este momento.';
 
       const headers = ['Fecha', 'Hora', 'Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Acción', 'Estado'];
       const rows = logs.map(l => [
         l.date,
         l.time,
-        (l.name ?? '').replace(/,/g, ''),
+        l.name ?? '',
         l.rut,
         l.type,
-        (l.unit ?? '').replace(/,/g, ''),
+        l.unit ?? '',
         l.plate || 'N/A',
         l.action,
         l.action === 'Salida'
@@ -98,9 +101,9 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
 
       const accessContent = [
         `--- BITÁCORA COMPLETA DE MOVIMIENTOS ---`,
-        headers.join(','),
-        ...rows.map(e => e.join(','))
-      ].join('\n');
+        csvRow(headers),
+        ...rows.map(csvRow)
+      ].join('\r\n');
 
       let incidentContent = '';
       if (incidents.length > 0) {
@@ -111,21 +114,29 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
           i.category,
           i.reporter,
           i.gate,
-          `"${i.title.replace(/"/g, '""')}"`,
-          `"${i.description.replace(/"/g, '""')}"`
+          i.title,
+          i.description
         ]);
-        incidentContent = `\n\n--- INFORME DE INCIDENCIAS ---\n${incidentHeaders.join(',')}\n${incidentRows.map(e => e.join(',')).join('\n')}`;
+        incidentContent = [
+          '',
+          '--- INFORME DE INCIDENCIAS ---',
+          csvRow(incidentHeaders),
+          ...incidentRows.map(csvRow)
+        ].join('\r\n');
       }
 
-      const csvContent = `${topMeta}\n${presentContent}\n\n${accessContent}${incidentContent}`;
-      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const csvContent = `${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
+      const blob = csvBlob(csvContent);
       const url = URL.createObjectURL(blob);
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', url);
       downloadAnchor.setAttribute('download', `SecurGuard-HistorialAccesos-${getLocalDateISO()}.csv`);
+      downloadAnchor.style.visibility = 'hidden';
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       document.body.removeChild(downloadAnchor);
+      // Liberar memoria: revocar el object URL tras iniciar la descarga.
+      setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (e) {
       alert('Error exportando bitácora CSV.');
     }
