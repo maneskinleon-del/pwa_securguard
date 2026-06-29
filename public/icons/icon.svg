@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SecurGuard AI">
+  <title>SecurGuard AI</title>
+  <!-- Background with brand color -->
+  <rect width="512" height="512" rx="96" fill="#0b1326"/>
+  <!-- Subtle gradient overlay -->
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e2a4a" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#0b1326" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#g)"/>
+  <!-- Shield outline -->
+  <path d="M256 96 L112 148 V268 C112 348 174 416 256 448 C338 416 400 348 400 268 V148 Z"
+        fill="none" stroke="#818cf8" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Check mark inside shield -->
+  <path d="M196 262 L238 304 L324 218"
+        fill="none" stroke="#a5b4fc" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
