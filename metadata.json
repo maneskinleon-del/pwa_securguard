@@ -1,0 +1,6 @@
+{
+  "name": "SecurGuard AI",
+  "description": "Smart access control and real-time security logging platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

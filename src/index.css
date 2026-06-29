@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface-dim: #020617;
+  --color-surface-container: #0f172a;
+  --color-surface-container-lowest: #020617;
+  --color-surface-container-low: #090f1e;
+  --color-surface-container-high: #1e293b;
+  --color-surface-container-highest: #334155;
+  --color-surface-bright: #1e293b;
+  
+  --color-primary: #818cf8;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #4f46e5;
+  --color-primary-fixed-dim: #818cf8;
+  --color-primary-fixed: #e0e7ff;
+  
+  --color-secondary: #34d399;
+  --color-on-secondary: #022c22;
+  --color-secondary-container: #059669;
+  
+  --color-tertiary: #fbbf24;
+  --color-on-tertiary: #451a03;
+  --color-tertiary-container: #d97706;
+  --color-on-tertiary-container: #451a03;
+  
+  --color-error: #f87171;
+  --color-on-error: #450a0a;
+  --color-error-container: #b91c1c;
+  
+  --color-on-surface: #f1f5f9;
+  --color-on-surface-variant: #94a3b8;
+  --color-outline: #64748b;
+  --color-outline-variant: #1e293b;
+  
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2.5rem;
+  
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+}
