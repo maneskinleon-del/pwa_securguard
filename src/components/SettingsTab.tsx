@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { ShieldCheck, UserCheck, Volume2, VolumeX, Bell, AlertTriangle, Cpu, CheckCircle, Flame, Server, Trash2, CalendarDays, Settings2 } from 'lucide-react';
+import { ShieldCheck, UserCheck, Volume2, VolumeX, Bell, AlertTriangle, Cpu, CheckCircle, Flame, Server, Trash2, CalendarDays, Settings2, Download } from 'lucide-react';
 import { GuardProfile, IncidentReport } from '../types';
 
 interface SettingsTabProps {
@@ -14,9 +14,10 @@ interface SettingsTabProps {
   onResolveIncident: (id: string) => void;
   onResetDay: () => void;
   onDeleteAll: () => void;
+  onExportBackup: () => void;
 }
 
-export function SettingsTab({ profile, onChangeProfile, incidents, onResolveIncident, onResetDay, onDeleteAll }: SettingsTabProps) {
+export function SettingsTab({ profile, onChangeProfile, incidents, onResolveIncident, onResetDay, onDeleteAll, onExportBackup }: SettingsTabProps) {
   const [editingName, setEditingName] = useState(profile.name);
   const [editingGate, setEditingGate] = useState(profile.gate);
   const [isSaved, setIsSaved] = useState(false);
@@ -35,7 +36,11 @@ export function SettingsTab({ profile, onChangeProfile, incidents, onResolveInci
   };
 
   const toggleNotification = () => {
-    onChangeProfile({ ...profile, notifications: !profile.notifications });
+    const next = !profile.notifications;
+    onChangeProfile({ ...profile, notifications: next });
+    if (next && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
   };
 
   const toggleSound = () => {
@@ -159,8 +164,8 @@ export function SettingsTab({ profile, onChangeProfile, incidents, onResolveInci
                     <ShieldCheck className="w-4 h-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h4 className="text-[11px] font-bold text-slate-200">Doble Validación FRS</h4>
-                    <p className="text-[9px] text-slate-500 font-medium font-sans">Verificación biométrica automatizada.</p>
+                    <h4 className="text-[11px] font-bold text-slate-200">Validación FRS (demo)</h4>
+                    <p className="text-[9px] text-slate-500 font-medium font-sans">Marca de preferencia; sin verificación real activa.</p>
                   </div>
                 </div>
                 <button
@@ -282,6 +287,25 @@ export function SettingsTab({ profile, onChangeProfile, incidents, onResolveInci
         </section>
 
       </div>
+
+      {/* Backup / Respaldo section */}
+      <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] p-6 shadow-lg space-y-4">
+        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+          <Download className="w-4 h-4 text-indigo-400" />
+          Respaldo y Portabilidad
+        </h3>
+        <p className="text-[11px] text-slate-400 leading-normal">
+          Exporta todos los datos (registros, personas, incidencias, perfil) a un archivo <strong className="text-indigo-300">.json</strong>. Guárdalo como respaldo o para moverlo a otro dispositivo. El almacenamiento local se pierde al cambiar de teléfono o borrar caché.
+        </p>
+        <button
+          type="button"
+          onClick={onExportBackup}
+          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white font-extrabold text-[11px] uppercase rounded-xl border border-indigo-500/20 hover:border-transparent transition-all cursor-pointer"
+        >
+          <Download className="w-4 h-4" />
+          Exportar Respaldo Completo (.json)
+        </button>
+      </section>
 
       {/* Incident Tickets section */}
       <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] p-6 shadow-lg space-y-4">

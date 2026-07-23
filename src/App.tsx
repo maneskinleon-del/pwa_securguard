@@ -324,6 +324,17 @@ export default function App() {
       ...prevLogs
     ]);
     setIncidents(prev => [report, ...prev]);
+
+    // Notificación del sistema si el operador habilitó radiodifusión de alertas
+    if (profile.notifications && 'Notification' in window) {
+      try {
+        if (Notification.permission === 'granted') {
+          new Notification(`SecurGuard · ${newIncident.category}`, {
+            body: `${newIncident.title}\n${newIncident.description}`,
+          });
+        }
+      } catch (_) { /* notificaciones no disponibles en este contexto */ }
+    }
   };
 
   const handleImportedPersonas = (incoming: Persona[]) => {
@@ -411,6 +422,29 @@ export default function App() {
       message: 'Registros del día reiniciados. La base de personas se mantuvo intacta.',
       type: 'success'
     });
+  };
+
+  const handleExportBackup = () => {
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      profile,
+      logs,
+      activeInside,
+      incidents,
+      personas
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `SecurGuard-Respaldo-${getLocalDateISO()}.json`;
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setToast({ message: 'Respaldo completo exportado (.json)', type: 'success' });
   };
 
   const handleDeleteAll = () => {
@@ -506,6 +540,7 @@ export default function App() {
             incidents={incidents}
             onMarkExit={handleMarkExit}
             onResetDay={handleResetDay}
+            clock={clock}
             onOpenRegister={() => {
               setRegisterPreset('VISITANTE');
               setIsRegisterOpen(true);
@@ -553,6 +588,7 @@ export default function App() {
             onResolveIncident={handleResolveIncident}
             onResetDay={handleResetDay}
             onDeleteAll={handleDeleteAll}
+            onExportBackup={handleExportBackup}
           />
         )}
       </main>

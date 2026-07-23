@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { X, ShieldAlert, Plus, Save, FileSpreadsheet, Upload, Key, User, Flame } from 'lucide-react';
 import { LogItem, IncidentReport, AccessType, Persona } from '../types';
+import { isValidRut, normalizeRut } from '../utils/rut';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -38,10 +39,14 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
       alert('Por favor complete todos los datos obligatorios (Nombre, RUT, Unidad)');
       return;
     }
+    if (!isValidRut(rut)) {
+      alert('El RUT ingresado no es válido. Verifica el dígito verificador (ej. 19.453.120-K).');
+      return;
+    }
     const chosenUrl = avatarPresets.find(p => p.id === avatarPreset)?.url || '';
     onSave({
       name,
-      rut,
+      rut: normalizeRut(rut),
       plate: plate.trim() || undefined,
       type,
       action: 'Entrada',
@@ -350,10 +355,11 @@ export function JsonImportModal({ isOpen, onClose, onImport }: JsonImportModalPr
         if (!item.name || !item.rut) {
           throw new Error(`El elemento en el índice ${index} no tiene datos de Nombre o RUT válidos.`);
         }
+        const rut = isValidRut(item.rut) ? normalizeRut(item.rut) : item.rut;
         return {
           id: item.id || `persona-${Date.now()}-${index}`,
           name: item.name,
-          rut: item.rut,
+          rut,
           plate: item.plate,
           type: item.type || 'VISITANTE',
           unit: item.unit || 'Lote Importado',

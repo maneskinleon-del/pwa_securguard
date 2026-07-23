@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Loader2, CheckCircle2, Shield, Bell, LogIn, ExternalLink, Download, History } from 'lucide-react';
 import { LogItem, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
@@ -18,25 +18,16 @@ interface ControlTabProps {
   onMarkExit: (id: string) => void;
   onOpenRegister: () => void;
   onResetDay?: () => void;
+  clock: string;
 }
 
-export function ControlTab({ logs, activeInside, profile, incidents, onMarkExit, onOpenRegister, onResetDay }: ControlTabProps) {
+export function ControlTab({ logs, activeInside, profile, incidents, onMarkExit, onOpenRegister, onResetDay, clock }: ControlTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [clock, setClock] = useState('');
   const [loadingExits, setLoadingExits] = useState<{ [key: string]: boolean }>({});
   const [recordedExits, setRecordedExits] = useState<{ [key: string]: boolean }>({});
   const [viewMode, setViewMode] = useState<'inside' | 'all'>('all');
 
-  // Real-time beautiful system clock as seen in the top right of the screenshot "19:08:43"
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setClock(now.toLocaleTimeString('es-CL', { hour12: false }));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // El reloj ahora viene desde App (un solo setInterval compartido, evita duplicados)
 
   const handleExitClick = (logId: string) => {
     setLoadingExits(prev => ({ ...prev, [logId]: true }));
