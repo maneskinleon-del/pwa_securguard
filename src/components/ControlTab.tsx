@@ -7,8 +7,7 @@ import React, { useState } from 'react';
 import { Search, Loader2, CheckCircle2, Shield, Bell, LogIn, ExternalLink, Download, History } from 'lucide-react';
 import { LogItem, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
-import { openEntryIds, isEntryStillOpen, formatDurationFromMs } from '../utils/report';
-import { csvRow, csvBlob } from '../utils/csv';
+import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
 
 interface ControlTabProps {
   logs: LogItem[];
@@ -94,93 +93,14 @@ export function ControlTab({ logs, activeInside, profile, incidents, onMarkExit,
 
   const handleExportLogsCSV = () => {
     try {
-      // Consolidación de estados: activeInside contiene exactamente a quienes tienen
-      // una Entrada sin Salida correspondiente (están físicamente en el recinto).
-      const openIds = openEntryIds(activeInside);
-
-      // 1. Set up the structural breakdown of the CSV Output
-      const topMeta = [
-        `Reporte de Control de Accesos y Seguridad`,
-        `Guardia a Cargo:,${profile.name}`,
-        `Punto de Control:,${profile.gate}`,
-        `Fecha de Exportación:,${new Date().toLocaleString()}`,
-        `Personas Actualmente en Recinto:,${activeInside.length}`,
-        ``,
-        `--- ESTADO ACTUAL DEL RECINTO (Solo personas presentes) ---`
-      ].join('\r\n');
-
-      // Sección consolidada: SOLO personas con Entrada sin Salida (físicamente presentes).
-      // RFC 4180: csvRow escapa comas/comillas/saltos de línea automáticamente,
-      // así que ya no necesitamos .replace(/,/g, '') sobre los nombres.
-      const presentHeaders = ['Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Hora Entrada', 'Permanencia'];
-      const presentRows = activeInside.map(s => [
-        s.name ?? '',
-        s.rut,
-        s.type,
-        s.unit ?? '',
-        s.plate || 'N/A',
-        s.entryTime,
-        s.entryTimestamp ? formatDurationFromMs(Date.now() - s.entryTimestamp) : 'N/A'
-      ]);
-      const presentContent = presentRows.length > 0
-        ? [csvRow(presentHeaders), ...presentRows.map(csvRow)].join('\r\n')
-        : 'Sin personas en el recinto en este momento.';
-
-      const headers = ['Fecha', 'Hora', 'Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Acción', 'Estado / Permanencia'];
-      const rows = logs.map(l => [
-        l.date,
-        l.time,
-        l.name ?? '',
-        l.rut,
-        l.type,
-        l.unit ?? '',
-        l.plate || 'N/A',
-        l.action,
-        // Estado fiel por sesión: una Entrada sólo figura "EN RECINTO" si su sesión
-        // sigue abierta; si ya tuvo Salida, queda como "Fuera del recinto".
-        l.action === 'Salida'
-          ? `Permanencia: ${l.duration || 'N/A'}`
-          : (isEntryStillOpen(l, openIds) ? 'EN RECINTO' : 'Fuera del recinto')
-      ]);
-
-      const accessContent = [
-        `--- BITÁCORA COMPLETA DE MOVIMIENTOS ---`,
-        csvRow(headers),
-        ...rows.map(csvRow)
-      ].join('\r\n');
-
-      let incidentContent = '';
-      if (incidents.length > 0) {
-        const incidentHeaders = ['Fecha', 'Hora', 'Categoría', 'Reportero', 'Ubicación', 'Título', 'Descripción'];
-        const incidentRows = incidents.map(i => [
-          getLocalDateISO(), // approx date for incident
-          i.time,
-          i.category,
-          i.reporter,
-          i.gate,
-          i.title,
-          i.description
-        ]);
-        incidentContent = [
-          '',
-          '--- INFORME DE INCIDENCIAS ---',
-          csvRow(incidentHeaders),
-          ...incidentRows.map(csvRow)
-        ].join('\r\n');
-      }
-
-      const csvContent = `${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
-      const blob = csvBlob(csvContent);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `SecurGuard-AuditoriaAccesos-${getLocalDateISO()}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      // Liberar memoria: revocar el object URL tras iniciar la descarga.
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      const csvContent = buildSecurityReportCSV({
+        logs,
+        activeInside,
+        profile,
+        incidents,
+        statusHeader: 'Estado / Permanencia',
+      });
+      downloadSecurityReportCSV(csvContent, `SecurGuard-AuditoriaAccesos-${getLocalDateISO()}.csv`);
     } catch (e) {
       alert('Error exportando registro de accesos CSV.');
     }

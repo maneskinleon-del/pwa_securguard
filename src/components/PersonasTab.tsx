@@ -7,8 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Download, Trash2, Camera, ShieldAlert, BarChart2, Users, Flame, Maximize2, ShieldCheck, Check, LogIn, AlarmClock, ChevronRight, AlertTriangle } from 'lucide-react';
 import { LogItem, Persona, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
-import { openEntryIds, isEntryStillOpen, formatDurationFromMs } from '../utils/report';
-import { csvRow, csvBlob } from '../utils/csv';
+import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
 
 interface PersonasTabProps {
   logs: LogItem[];
@@ -54,89 +53,14 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
 
   const handleExportLogsCSV = () => {
     try {
-      // Consolidación de estados: activeInside = personas con Entrada sin Salida (presentes).
-      const openIds = openEntryIds(activeInside);
-
-      const topMeta = [
-        `Reporte de Control de Accesos y Seguridad`,
-        `Guardia a Cargo:,${profile.name}`,
-        `Punto de Control:,${profile.gate}`,
-        `Fecha de Exportación:,${new Date().toLocaleString()}`,
-        `Personas Actualmente en Recinto:,${activeInside.length}`,
-        ``,
-        `--- ESTADO ACTUAL DEL RECINTO (Solo personas presentes) ---`
-      ].join('\r\n');
-
-      // Sección consolidada: SOLO personas físicamente presentes.
-      // RFC 4180: csvRow escapa comas/comillas/saltos de línea automáticamente,
-      // así que ya no necesitamos .replace(/,/g, '') sobre los nombres.
-      const presentHeaders = ['Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Hora Entrada', 'Permanencia'];
-      const presentRows = activeInside.map(s => [
-        s.name ?? '',
-        s.rut,
-        s.type,
-        s.unit ?? '',
-        s.plate || 'N/A',
-        s.entryTime,
-        s.entryTimestamp ? formatDurationFromMs(Date.now() - s.entryTimestamp) : 'N/A'
-      ]);
-      const presentContent = presentRows.length > 0
-        ? [csvRow(presentHeaders), ...presentRows.map(csvRow)].join('\r\n')
-        : 'Sin personas en el recinto en este momento.';
-
-      const headers = ['Fecha', 'Hora', 'Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Acción', 'Estado'];
-      const rows = logs.map(l => [
-        l.date,
-        l.time,
-        l.name ?? '',
-        l.rut,
-        l.type,
-        l.unit ?? '',
-        l.plate || 'N/A',
-        l.action,
-        l.action === 'Salida'
-          ? `Permanencia: ${l.duration || 'N/A'}`
-          : (isEntryStillOpen(l, openIds) ? 'EN RECINTO' : 'Fuera del recinto')
-      ]);
-
-      const accessContent = [
-        `--- BITÁCORA COMPLETA DE MOVIMIENTOS ---`,
-        csvRow(headers),
-        ...rows.map(csvRow)
-      ].join('\r\n');
-
-      let incidentContent = '';
-      if (incidents.length > 0) {
-        const incidentHeaders = ['Fecha', 'Hora', 'Categoría', 'Reportero', 'Ubicación', 'Título', 'Descripción'];
-        const incidentRows = incidents.map(i => [
-          getLocalDateISO(),
-          i.time,
-          i.category,
-          i.reporter,
-          i.gate,
-          i.title,
-          i.description
-        ]);
-        incidentContent = [
-          '',
-          '--- INFORME DE INCIDENCIAS ---',
-          csvRow(incidentHeaders),
-          ...incidentRows.map(csvRow)
-        ].join('\r\n');
-      }
-
-      const csvContent = `${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
-      const blob = csvBlob(csvContent);
-      const url = URL.createObjectURL(blob);
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', url);
-      downloadAnchor.setAttribute('download', `SecurGuard-HistorialAccesos-${getLocalDateISO()}.csv`);
-      downloadAnchor.style.visibility = 'hidden';
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      document.body.removeChild(downloadAnchor);
-      // Liberar memoria: revocar el object URL tras iniciar la descarga.
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      const csvContent = buildSecurityReportCSV({
+        logs,
+        activeInside,
+        profile,
+        incidents,
+        statusHeader: 'Estado',
+      });
+      downloadSecurityReportCSV(csvContent, `SecurGuard-HistorialAccesos-${getLocalDateISO()}.csv`);
     } catch (e) {
       alert('Error exportando bitácora CSV.');
     }

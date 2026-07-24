@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ActiveCheckIn, LogItem } from '../types';
+import { ActiveCheckIn, GuardProfile, IncidentReport, LogItem } from '../types';
+import { csvBlob, csvRow } from './csv';
+import { getLocalDateISO } from './datetime';
 
 /**
  * Consolidación de estados de presencia para los informes.
@@ -50,3 +52,117 @@ export const formatDurationFromMs = (ms: number): string => {
   const m = mins % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
+
+/**
+ * Construye el contenido CSV del informe de control de accesos.
+ *
+ * Unifica la lógica que antes vivía duplicada en ControlTab y PersonasTab.
+ * La única diferencia semántica entre ambos tabs era el encabezado de la
+ * columna de estado ("Estado / Permanencia" vs "Estado") y el nombre del
+ * archivo de descarga, controlados respectivamente por `statusHeader` y por
+ * quien llama (cada tab conserva su propio nombre de archivo).
+ *
+ * @param logs        Bitácora completa de movimientos.
+ * @param activeInside Personas físicamente presentes en el recinto.
+ * @param profile      Perfil del guardia a cargo (nombre y punto de control).
+ * @param incidents    Incidencias reportadas (sección opcional).
+ * @param statusHeader Texto del encabezado de la columna de estado.
+ */
+export const buildSecurityReportCSV = (
+  params: {
+    logs: LogItem[];
+    activeInside: ActiveCheckIn[];
+    profile: GuardProfile;
+    incidents: IncidentReport[];
+    statusHeader: string;
+  },
+): string => {
+  const { logs, activeInside, profile, incidents, statusHeader } = params;
+  const openIds = openEntryIds(activeInside);
+
+  const topMeta = [
+    `Reporte de Control de Accesos y Seguridad`,
+    `Guardia a Cargo:,${profile.name}`,
+    `Punto de Control:,${profile.gate}`,
+    `Fecha de Exportación:,${new Date().toLocaleString()}`,
+    `Personas Actualmente en Recinto:,${activeInside.length}`,
+    ``,
+    `--- ESTADO ACTUAL DEL RECINTO (Solo personas presentes) ---`,
+  ].join('\r\n');
+
+  const presentHeaders = ['Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Hora Entrada', 'Permanencia'];
+  const presentRows = activeInside.map(s => [
+    s.name ?? '',
+    s.rut,
+    s.type,
+    s.unit ?? '',
+    s.plate || 'N/A',
+    s.entryTime,
+    s.entryTimestamp ? formatDurationFromMs(Date.now() - s.entryTimestamp) : 'N/A',
+  ]);
+  const presentContent =
+    presentRows.length > 0
+      ? [csvRow(presentHeaders), ...presentRows.map(csvRow)].join('\r\n')
+      : 'Sin personas en el recinto en este momento.';
+
+  const headers = ['Fecha', 'Hora', 'Nombre', 'RUT', 'Tipo', 'Destino / Unidad', 'Patente', 'Acción', statusHeader];
+  const rows = logs.map(l => [
+    l.date,
+    l.time,
+    l.name ?? '',
+    l.rut,
+    l.type,
+    l.unit ?? '',
+    l.plate || 'N/A',
+    l.action,
+    l.action === 'Salida'
+      ? `Permanencia: ${l.duration || 'N/A'}`
+      : (isEntryStillOpen(l, openIds) ? 'EN RECINTO' : 'Fuera del recinto'),
+  ]);
+
+  const accessContent = [
+    `--- BITÁCORA COMPLETA DE MOVIMIENTOS ---`,
+    csvRow(headers),
+    ...rows.map(csvRow),
+  ].join('\r\n');
+
+  let incidentContent = '';
+  if (incidents.length > 0) {
+    const incidentHeaders = ['Fecha', 'Hora', 'Categoría', 'Reportero', 'Ubicación', 'Título', 'Descripción'];
+    const incidentRows = incidents.map(i => [
+      getLocalDateISO(),
+      i.time,
+      i.category,
+      i.reporter,
+      i.gate,
+      i.title,
+      i.description,
+    ]);
+    incidentContent = [
+      '',
+      '--- INFORME DE INCIDENCIAS ---',
+      csvRow(incidentHeaders),
+      ...incidentRows.map(csvRow),
+    ].join('\r\n');
+  }
+
+  return `${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
+};
+
+/**
+ * Dispara la descarga del informe CSV en el navegador.
+ * Centraliza la creación del blob y el anchor para evitar duplicación.
+ */
+export const downloadSecurityReportCSV = (csvContent: string, fileName: string): void => {
+  const blob = csvBlob(csvContent);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', fileName);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
