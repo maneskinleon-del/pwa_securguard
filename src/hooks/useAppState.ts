@@ -277,20 +277,6 @@ export const useAppState = (): AppState => {
       reporter: profile.name,
       gate: profile.gate,
     };
-    setLogs(prevLogs => [
-      {
-        id: `inc-log-${generateId()}`,
-        name: `🚨 Alerta: ${newIncident.title}`,
-        rut: 'SISTEMA',
-        type: 'VISITANTE',
-        action: 'Entrada',
-        time: timestamp,
-        date: getLocalDateISO(),
-        unit: 'Módulo de Emergencias',
-        status: 'active',
-      },
-      ...prevLogs,
-    ]);
     setIncidents(prev => [report, ...prev]);
 
     // Notificación del sistema si el operador habilitó radiodifusión de alertas
