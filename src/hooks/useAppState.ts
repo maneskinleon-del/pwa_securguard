@@ -178,7 +178,6 @@ export const useAppState = (): AppState => {
   // System Core actions
   const handleMarkExit = (idOrRut: string, customExitTime?: string) => {
     const timestamp = customExitTime || new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-    const datestamp = getLocalDateISO();
 
     // Find in activeInside (RUT comparison is null-safe via normRut)
     const target = normRut(idOrRut);
@@ -188,8 +187,20 @@ export const useAppState = (): AppState => {
       return;
     }
 
+    // When an exit time is supplied manually, the date of the exit should follow
+    // the entry's own date (the guard is correcting the same-day shift), not today.
+    const datestamp = customExitTime ? (session.entryDate || getLocalDateISO()) : getLocalDateISO();
+
+    // Resolve the real exit timestamp so duration is accurate even when a custom
+    // exit time is provided (otherwise it would wrongly use Date.now()).
+    let exitTs = Date.now();
+    if (customExitTime && session.entryDate) {
+      const parsed = new Date(`${session.entryDate}T${customExitTime}`);
+      if (!Number.isNaN(parsed.getTime())) exitTs = parsed.getTime();
+    }
+
     // Calculate stay duration safely
-    const diffMs = session.entryTimestamp ? (Date.now() - session.entryTimestamp) : 0;
+    const diffMs = session.entryTimestamp ? (exitTs - session.entryTimestamp) : 0;
     let durationStr = 'N/A';
     if (diffMs > 0) {
       const diffMinutes = Math.floor(diffMs / 60000);
