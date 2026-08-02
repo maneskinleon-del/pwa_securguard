@@ -156,11 +156,9 @@ export const buildSecurityReportCSV = (
     ].join('\r\n');
   }
 
-  // `sep=,` fuerza el delimitador de columna a coma en Excel, incluso en
-  // configuraciones regionales es-CL/es-ES donde el separador por defecto es
-  // punto y coma (sin esto, todo el CSV se ve en UNA sola columna y la
-  // descripción de incidencias "hacia abajo" en una celda).
-  return `sep=,\r\n${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
+  // `sep=,` lo agrega csvBlob() (centralizado en utils/csv.ts) para todos los
+  // exports; aquí solo se construye el contenido de las secciones.
+  return `${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
 };
 
 /**

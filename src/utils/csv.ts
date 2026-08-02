@@ -35,9 +35,16 @@ export function csvDocument(rows: readonly (readonly unknown[])[]): string {
 /** UTF-8 BOM that makes Excel reliably detect the encoding as UTF-8. */
 const UTF8_BOM = '\uFEFF';
 
-/** Build a Blob with UTF-8 BOM and `text/csv;charset=utf-8;` MIME. */
+/**
+ * Build a Blob with UTF-8 BOM, the `sep=,` Excel directive, and
+ * `text/csv;charset=utf-8;` MIME.
+ *
+ * `sep=,` fuerza el delimitador de columna a coma en Excel, incluso en
+ * configuraciones regionales es-CL/es-ES donde el separador por defecto es
+ * punto y coma (sin esto, cualquier CSV se ve en UNA sola columna al abrirlo).
+ */
 export function csvBlob(content: string): Blob {
-  return new Blob([UTF8_BOM + content], { type: 'text/csv;charset=utf-8;' });
+  return new Blob([UTF8_BOM + 'sep=,\r\n' + content], { type: 'text/csv;charset=utf-8;' });
 }
 
 /**
