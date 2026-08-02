@@ -76,6 +76,21 @@ const sanitizePersonas = (arr: any[]): Persona[] =>
       avatar: safeOptStr(p.avatar),
     }));
 
+const sanitizeIncidents = (arr: any[]): IncidentReport[] =>
+  arr.filter(isObj).map((i, idx) => ({
+    id: safeStr(i.id) || `rehydrated-inc-${idx}`,
+    title: safeStr(i.title),
+    description: safeStr(i.description),
+    category: (i.category === 'URGENTE' || i.category === 'MODERADO' || i.category === 'PREVENTIVO')
+      ? i.category
+      : 'MODERADO',
+    time: safeStr(i.time),
+    // Backfill: incidencias viejas (pre-campo `date`) quedan con la fecha de hoy
+    date: safeStr(i.date) || getLocalDateISO(),
+    reporter: safeStr(i.reporter),
+    gate: safeStr(i.gate),
+  }));
+
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 export interface AppState {
@@ -89,7 +104,7 @@ export interface AppState {
   // Actions
   handleMarkExit: (idOrRut: string, customExitTime?: string) => void;
   handleSaveRegister: (newEntry: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>) => void;
-  handleSaveIncident: (newIncident: Omit<IncidentReport, 'id' | 'time' | 'reporter' | 'gate'>) => void;
+  handleSaveIncident: (newIncident: Omit<IncidentReport, 'id' | 'time' | 'date' | 'reporter' | 'gate'>) => void;
   handleImportedPersonas: (incoming: Persona[]) => void;
   handleQuickCheckIn: (persona: Persona) => void;
   handleResetDay: () => void;
@@ -132,8 +147,8 @@ export const useAppState = (): AppState => {
   });
 
   const [incidents, setIncidents] = useState<IncidentReport[]>(() => {
-    const saved = localStorage.getItem('securguard_incidents');
-    return saved ? JSON.parse(saved) : INITIAL_INCIDENTS;
+    const arr = readArray('securguard_incidents');
+    return arr ? sanitizeIncidents(arr) : INITIAL_INCIDENTS;
   });
 
   const [profile, setProfile] = useState<GuardProfile>(() => {
@@ -279,12 +294,14 @@ export const useAppState = (): AppState => {
     setActiveInside(prev => [newActive, ...prev]);
   };
 
-  const handleSaveIncident = (newIncident: Omit<IncidentReport, 'id' | 'time' | 'reporter' | 'gate'>) => {
+  const handleSaveIncident = (newIncident: Omit<IncidentReport, 'id' | 'time' | 'date' | 'reporter' | 'gate'>) => {
     const timestamp = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    const datestamp = getLocalDateISO();
     const report: IncidentReport = {
       ...newIncident,
       id: `inc-${generateId()}`,
       time: timestamp,
+      date: datestamp,
       reporter: profile.name,
       gate: profile.gate,
     };

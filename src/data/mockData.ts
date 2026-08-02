@@ -101,6 +101,7 @@ export const INITIAL_INCIDENTS: IncidentReport[] = [
     description: 'Camioneta blanca estacionada frente a la salida norte obstruyendo el paso.',
     category: 'MODERADO',
     time: '14:20',
+    date: '2026-06-02',
     reporter: 'Guard Juan Pérez',
     gate: 'Gate A/B'
   },
@@ -110,6 +111,7 @@ export const INITIAL_INCIDENTS: IncidentReport[] = [
     description: 'Lector de tarjetas RFID de portería principal no responde, se reinició el control de acceso manual.',
     category: 'PREVENTIVO',
     time: '10:15',
+    date: '2026-06-02',
     reporter: 'System Dispatch',
     gate: 'Main North Gate'
   }

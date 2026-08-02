@@ -40,7 +40,8 @@ export interface IncidentReport {
   title: string;
   description: string;
   category: 'URGENTE' | 'MODERADO' | 'PREVENTIVO';
-  time: string;
+  time: string; // e.g. "18:14" or "06:30 AM"
+  date: string; // "2026-08-02" — fecha REAL del incidente (no la de exportación)
   reporter: string;
   gate: string;
 }

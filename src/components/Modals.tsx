@@ -224,7 +224,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
 interface IncidentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (report: Omit<IncidentReport, 'id' | 'time' | 'reporter' | 'gate'>) => void;
+  onSave: (report: Omit<IncidentReport, 'id' | 'time' | 'date' | 'reporter' | 'gate'>) => void;
 }
 
 export function IncidentModal({ isOpen, onClose, onSave }: IncidentModalProps) {

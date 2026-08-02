@@ -21,6 +21,17 @@ import { getLocalDateISO } from './datetime';
 
 const normRut = (v?: string | null): string => (v ?? '').trim().toUpperCase();
 
+/**
+ * Normaliza texto libre (descripciones, títulos, nombres) para el CSV.
+ *
+ * Convierte saltos de línea (textarea/enter) a un solo espacio para que cada
+ * registro quede en UNA fila: Excel móvil renderiza los saltos de línea como
+ * una celda gigante "hacia abajo", lo que rompe la visualización del informe.
+ * Las comas siguen escapadas por csvRow (RFC 4180) — esto solo ataca los \n/\r.
+ */
+const flatText = (v: string | null | undefined): string =>
+  (v ?? '').replace(/[\r\n]+/g, ' ').trim();
+
 /** Conjunto de IDs de entradas que siguen abiertas (persona aún dentro). */
 export const openEntryIds = (activeInside: ActiveCheckIn[]): Set<string> =>
   new Set(activeInside.map(a => a.id).filter(Boolean));
@@ -82,10 +93,10 @@ export const buildSecurityReportCSV = (
 
   const topMeta = [
     `Reporte de Control de Accesos y Seguridad`,
-    `Guardia a Cargo:,${profile.name}`,
-    `Punto de Control:,${profile.gate}`,
-    `Fecha de Exportación:,${new Date().toLocaleString()}`,
-    `Personas Actualmente en Recinto:,${activeInside.length}`,
+    csvRow(['Guardia a Cargo:', profile.name]),
+    csvRow(['Punto de Control:', profile.gate]),
+    csvRow(['Fecha de Exportación:', new Date().toLocaleString()]),
+    csvRow(['Personas Actualmente en Recinto:', activeInside.length]),
     ``,
     `--- ESTADO ACTUAL DEL RECINTO (Solo personas presentes) ---`,
   ].join('\r\n');
@@ -130,23 +141,26 @@ export const buildSecurityReportCSV = (
   if (incidents.length > 0) {
     const incidentHeaders = ['Fecha', 'Hora', 'Categoría', 'Reportero', 'Ubicación', 'Título', 'Descripción'];
     const incidentRows = incidents.map(i => [
-      getLocalDateISO(),
+      i.date, // fecha REAL del incidente (useAppState la backfillea al rehidratar)
       i.time,
       i.category,
-      i.reporter,
-      i.gate,
-      i.title,
-      i.description,
+      flatText(i.reporter),
+      flatText(i.gate),
+      flatText(i.title),
+      flatText(i.description),
     ]);
     incidentContent = [
-      '',
-      '--- INFORME DE INCIDENCIAS ---',
+      '\r\n--- INFORME DE INCIDENCIAS ---',
       csvRow(incidentHeaders),
       ...incidentRows.map(csvRow),
     ].join('\r\n');
   }
 
-  return `${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
+  // `sep=,` fuerza el delimitador de columna a coma en Excel, incluso en
+  // configuraciones regionales es-CL/es-ES donde el separador por defecto es
+  // punto y coma (sin esto, todo el CSV se ve en UNA sola columna y la
+  // descripción de incidencias "hacia abajo" en una celda).
+  return `sep=,\r\n${topMeta}\r\n${presentContent}\r\n\r\n${accessContent}${incidentContent}`;
 };
 
 /**

@@ -343,7 +343,7 @@ export function SettingsTab({ profile, onChangeProfile, incidents, onResolveInci
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1.5 leading-normal">{inc.description}</p>
                     <p className="text-[9px] font-mono text-slate-500 mt-2 font-bold uppercase tracking-wider">
-                      REPORTE: {inc.reporter} • HORA: {inc.time}
+                      REPORTE: {inc.reporter} • FECHA: {inc.date} • HORA: {inc.time}
                     </p>
                   </div>
                 </div>
