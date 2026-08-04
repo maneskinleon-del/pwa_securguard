@@ -18,3 +18,19 @@ View your app in AI Studio: https://ai.studio/apps/57c02c2b-cd84-4abe-b6ce-ca901
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Deploy automático (GitHub Pages)
+
+Cada push a `main` buildea y publica la PWA automáticamente vía GitHub Actions
+(`.github/workflows/deploy.yml`). El service worker cambia de versión de caché
+con cada deploy (`__BUILD_ID__` → SHA del commit), así los guardias dejan de ver
+versiones viejas.
+
+URL pública: https://maneskinleon-del.github.io/pwa_securguard/
+
+### Activar GitHub Pages (una sola vez)
+
+1. Ve a **Settings → Pages** del repo `maneskinleon-del/pwa_securguard`.
+2. En **Build and deployment → Source**, elige **GitHub Actions**.
+3. La rama por defecto ya está desplegada; a partir de ahí cada `git push`
+   actualiza la app automáticamente (pestaña **Actions** del repo para ver el estado).

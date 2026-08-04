@@ -5,6 +5,9 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // Rutas relativas para que la build funcione tanto en raíz (dev/AI Studio)
+    // como en subdirectorio (GitHub Pages: /pwa_securguard/).
+    base: './',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

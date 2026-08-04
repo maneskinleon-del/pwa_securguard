@@ -10,8 +10,14 @@
  *    so old caches are reclaimed in `activate`.
  */
 
-const CACHE_VERSION = 'securguard-cache-v1';
-const APP_SHELL = ['/', '/index.html', '/manifest.json', '/icons/icon.svg'];
+// __BUILD_ID__ se sustituye en el CI (GitHub Actions) por el SHA del commit,
+// de modo que cada deploy produce una versión de caché distinta y los
+// navegadores de los guardias dejan de usar la PWA vieja.
+const CACHE_VERSION = 'securguard-cache-v1-' + '__BUILD_ID__';
+
+// Base de la app (soporta subdirectorio en GitHub Pages: /pwa_securguard/)
+const BASE = new URL('./', self.location).pathname;
+const APP_SHELL = [BASE, BASE + 'index.html', BASE + 'manifest.json', BASE + 'icons/icon.svg'];
 
 self.addEventListener('install', (event) => {
   // Pre-cache the offline fallback so the SPA boots without a network.
@@ -35,7 +41,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-const isAsset = (pathname) => pathname.startsWith('/assets/') || pathname.startsWith('/icons/');
+const isAsset = (pathname) => pathname.startsWith(BASE + 'assets/') || pathname.startsWith(BASE + 'icons/');
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -49,7 +55,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Bypass API routes (none today, but keep the door closed).
-  if (url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith(BASE + 'api/')) return;
 
   // Navigation requests: network-first with offline fallback.
   if (request.mode === 'navigate') {
@@ -62,10 +68,10 @@ self.addEventListener('fetch', (event) => {
           cache.put(request, fresh.clone());
           return fresh;
         } catch (_err) {
-          // Offline: serve the cached page, then fall back to "/".
+          // Offline: serve the cached page, then fall back to the app shell.
           const cached = await caches.match(request);
           if (cached) return cached;
-          const shell = await caches.match('/');
+          const shell = await caches.match(BASE);
           if (shell) return shell;
           return new Response('Offline', { status: 503, statusText: 'Offline' });
         }

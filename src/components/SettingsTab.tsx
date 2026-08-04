@@ -239,10 +239,10 @@ export function SettingsTab({ profile, onChangeProfile, incidents, onResolveInci
           <div>
             <h3 className="text-xs font-bold text-rose-450 uppercase tracking-wider flex items-center gap-2 mb-2">
               <Trash2 className="w-4 h-4 text-rose-500" />
-              2. Eliminar Toda la Bitácora (Reinicio de Fábrica)
+              2. Eliminar Toda la Bitácora y Choferes (Reinicio de Fábrica)
             </h3>
             <p className="text-[11px] text-slate-400 leading-normal">
-              Borra <strong className="text-rose-400">toda la información</strong> local de manera permanente, incluyendo todos los pre-registros, base maestra de personas, contratistas, residentes de hoy e historial.
+              Borra <strong className="text-rose-400">toda la información</strong> local de manera permanente, incluyendo todos los pre-registros, base maestra de personas, contratistas, residentes de hoy, historial y el <strong className="text-rose-400">catálogo completo de choferes</strong>.
             </p>
           </div>
 
@@ -276,7 +276,7 @@ export function SettingsTab({ profile, onChangeProfile, incidents, onResolveInci
                   className="px-4 py-2 bg-red-650/10 hover:bg-rose-600 text-rose-400 hover:text-white font-extrabold text-[11px] uppercase rounded-xl border border-red-500/20 hover:border-transparent transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Eliminar Todo el Historial & Personas
+                  Eliminar Todo el Historial, Personas & Choferes
                 </button>
                 <span className="text-[9px] text-rose-400 font-bold uppercase tracking-widest bg-rose-950/15 border border-rose-500/10 px-2.5 py-0.5 rounded-full font-sans">
                   Borrado Completo
