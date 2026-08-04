@@ -118,6 +118,7 @@ export interface AppState {
   handleSaveIncident: (newIncident: Omit<IncidentReport, 'id' | 'time' | 'date' | 'reporter' | 'gate'>) => void;
   handleImportedPersonas: (incoming: Persona[]) => void;
   handleUpdatePersona: (updated: Persona) => void;
+  handleRemovePersona: (id: string) => void;
   handleRestoreDefaults: () => void;
   handleQuickCheckIn: (persona: Persona) => void;
   handleResetDay: () => void;
@@ -328,6 +329,10 @@ export const useAppState = (): AppState => {
     setPersonas(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
   };
 
+  const handleRemovePersona = (id: string) => {
+    setPersonas(prev => prev.filter(p => p.id !== id));
+  };
+
   const handleImportedPersonas = (incoming: Persona[]) => {
     setPersonas(prev => {
       const map = new Map<string, Persona>();
@@ -404,10 +409,11 @@ export const useAppState = (): AppState => {
     setLogs([]);
     setIncidents([]);
     setActiveInside([]);
-    // Do NOT clear setPersonas()! This preserves master base
+    setPersonas([]);
     localStorage.removeItem('securguard_logs');
     localStorage.removeItem('securguard_incidents');
     localStorage.removeItem('securguard_active_inside');
+    localStorage.removeItem('securguard_personas');
   };
 
   const handleExportBackup = () => {
@@ -486,6 +492,7 @@ export const useAppState = (): AppState => {
     handleSaveIncident,
     handleImportedPersonas,
     handleUpdatePersona,
+    handleRemovePersona,
     handleRestoreDefaults,
     handleQuickCheckIn,
     handleResetDay,

@@ -36,6 +36,7 @@ export default function App() {
     handleResolveIncident,
     handleCompleteHandover,
     handleUpdatePersona,
+    handleRemovePersona,
     handleRestoreDefaults,
   } = useAppState();
 
@@ -180,6 +181,7 @@ export default function App() {
             onImportPersonas={handleImportedPersonas}
             onRestoreDefaults={handleRestoreDefaults}
             onEditPersona={(persona) => { setEditingPersona(persona); setIsEditPersonaOpen(true); }}
+            onRemovePersona={handleRemovePersona}
           />
         )}
 
