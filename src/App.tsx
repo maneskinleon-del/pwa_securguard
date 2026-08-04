@@ -12,6 +12,7 @@ import { PersonasTab } from './components/PersonasTab';
 import { SettingsTab } from './components/SettingsTab';
 import { RegisterModal, IncidentModal, JsonImportModal, ShiftHandoverModal } from './components/Modals';
 import { useAppState } from './hooks/useAppState';
+import { useChoferesState } from './hooks/useChoferesState';
 
 export default function App() {
   // Navigation
@@ -36,6 +37,16 @@ export default function App() {
     handleResolveIncident,
     handleCompleteHandover,
   } = useAppState();
+
+  // Choferes state (drivers + plates management)
+  const {
+    choferes,
+    activeChoferes,
+    addChofer,
+    updateChofer,
+    deactivateChofer,
+    reactivateChofer,
+  } = useChoferesState();
 
   // Modal display toggles
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -263,6 +274,12 @@ export default function App() {
         onClose={() => setIsRegisterOpen(false)}
         onSave={handleSaveRegister}
         initialType={registerPreset}
+        choferes={choferes}
+        activeChoferes={activeChoferes}
+        onAddChofer={addChofer}
+        onUpdateChofer={updateChofer}
+        onDeactivateChofer={deactivateChofer}
+        onReactivateChofer={reactivateChofer}
       />
 
       <IncidentModal

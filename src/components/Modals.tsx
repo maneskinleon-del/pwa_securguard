@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { X, ShieldAlert, Plus, Save, FileSpreadsheet, Upload, Key, User, Flame } from 'lucide-react';
-import { LogItem, IncidentReport, AccessType, Persona } from '../types';
+import React, { useState, useMemo } from 'react';
+import { X, ShieldAlert, Plus, Save, FileSpreadsheet, Upload, Key, User, Flame, Truck, Search, ChevronDown, UserPlus, ToggleLeft, ToggleRight } from 'lucide-react';
+import { LogItem, IncidentReport, AccessType, Persona, Chofer } from '../types';
 import { isValidRut, normalizeRut } from '../utils/rut';
 
 interface RegisterModalProps {
@@ -13,9 +13,15 @@ interface RegisterModalProps {
   onClose: () => void;
   onSave: (log: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>) => void;
   initialType?: AccessType;
+  choferes: Chofer[];
+  activeChoferes: Chofer[];
+  onAddChofer: (chofer: Omit<Chofer, 'id'>) => Chofer;
+  onUpdateChofer: (id: string, changes: Partial<Chofer>) => void;
+  onDeactivateChofer: (id: string) => void;
+  onReactivateChofer: (id: string) => void;
 }
 
-export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANTE' }: RegisterModalProps) {
+export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANTE', choferes, activeChoferes, onAddChofer, onUpdateChofer, onDeactivateChofer, onReactivateChofer }: RegisterModalProps) {
   const [name, setName] = useState('');
   const [rut, setRut] = useState('');
   const [plate, setPlate] = useState('');
@@ -23,9 +29,73 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
   const [unit, setUnit] = useState('');
   const [avatarPreset, setAvatarPreset] = useState('1');
 
-  if (!isOpen) return null;
+  // Estado para el selector de choferes (solo cuando type = CAMION o ENTREGA)
+  const [showChoferSelector, setShowChoferSelector] = useState(false);
+  const [choferSearch, setChoferSearch] = useState('');
+  const [showInactivos, setShowInactivos] = useState(false);
+  const [showNewChoferForm, setShowNewChoferForm] = useState(false);
+  // Nuevo chofer form
+  const [newChoferName, setNewChoferName] = useState('');
+  const [newChoferRut, setNewChoferRut] = useState('');
 
-  // Preset avatar URLs to simulate guard scanning photo from identification ID
+  const isTruckType = type === 'CAMION' || type === 'ENTREGA';
+
+  const normalizeText = (text?: string | null) => {
+    if (!text || typeof text !== 'string') return '';
+    return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  };
+
+  // Choferes filtrados por búsqueda
+  const filteredChoferes = useMemo(() => {
+    const list = showInactivos ? choferes : activeChoferes;
+    if (!choferSearch.trim()) return list;
+    const q = normalizeText(choferSearch);
+    return list.filter(c =>
+      normalizeText(c.name).includes(q) ||
+      normalizeText(c.rut).includes(q) ||
+      normalizeText(c.plate).includes(q)
+    );
+  }, [choferes, activeChoferes, choferSearch, showInactivos]);
+
+  // Auto-completar patente y unidad al seleccionar un chofer
+  const selectChofer = (chofer: Chofer) => {
+    setName(chofer.name);
+    setRut(chofer.rut);
+    setPlate(chofer.plate);
+    setUnit(chofer.unit || 'Aparcadero');
+    setShowChoferSelector(false);
+    setChoferSearch('');
+  };
+
+  // Agregar nuevo chofer desde el formulario rápido
+  const handleAddNewChofer = () => {
+    if (!newChoferName.trim() || !newChoferRut.trim()) return;
+    const nuevo = onAddChofer({
+      name: newChoferName.trim(),
+      rut: normalizeRut(newChoferRut.trim()),
+      plate: plate || '',
+      unit: unit || 'Aparcadero',
+      active: true,
+    });
+    selectChofer(nuevo);
+    setNewChoferName('');
+    setNewChoferRut('');
+    setShowNewChoferForm(false);
+  };
+
+  // Resetear estado del selector al cerrar el modal
+  React.useEffect(() => {
+    if (!isOpen) {
+      setShowChoferSelector(false);
+      setChoferSearch('');
+      setShowInactivos(false);
+      setShowNewChoferForm(false);
+      setNewChoferName('');
+      setNewChoferRut('');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
   const avatarPresets = [
     { id: '1', name: 'Scanner 1', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=120' },
     { id: '2', name: 'Scanner 2', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120' },
@@ -58,12 +128,13 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
     setRut('');
     setPlate('');
     setUnit('');
+    setChoferSearch('');
+    setShowChoferSelector(false);
     onClose();
   };
 
   const fillMockData = () => {
-    const isTruck = type === 'CAMION' || type === 'ENTREGA';
-    if (isTruck) {
+    if (isTruckType) {
       setName('Distribuidor Alimentos S.A.');
       setRut('76.211.530-5');
       setPlate('HL-90-88');
@@ -111,14 +182,165 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
 
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Nombre Completo *</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">
+                <Truck className="w-3.5 h-3.5 inline mr-1" />
+                {isTruckType ? 'Chofer / Conductor *' : 'Nombre Completo *'}
+              </label>
+              
+              {isTruckType && (
+                <div className="mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowChoferSelector(!showChoferSelector)}
+                    className="w-full flex items-center justify-between bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface hover:border-indigo-500/50 transition-colors cursor-pointer"
+                  >
+                    <span className="text-xs text-slate-400 flex items-center gap-2">
+                      <Search className="w-3.5 h-3.5" />
+                      {name ? `${name} (${plate || 'sin patente'})` : 'Seleccionar chofer del listado...'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showChoferSelector ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showChoferSelector && (
+                    <div className="mt-2 bg-[#0a101f] border border-[#2d3449] rounded-xl overflow-hidden">
+                      {/* Buscador de choferes */}
+                      <div className="p-2 border-b border-[#2d3449]">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                          <input
+                            type="text"
+                            value={choferSearch}
+                            onChange={e => setChoferSearch(e.target.value)}
+                            placeholder="Buscar chofer por nombre, RUT o patente..."
+                            className="w-full bg-[#020617] border border-slate-800 rounded-lg py-2 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+
+                      {/* Lista de choferes */}
+                      <div className="max-h-48 overflow-y-auto">
+                        {filteredChoferes.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-slate-500">
+                            {choferSearch ? 'Sin resultados. ¿Agregar nuevo chofer?' : 'No hay choferes registrados.'}
+                          </div>
+                        ) : (
+                          filteredChoferes.map(chofer => (
+                            <button
+                              key={chofer.id}
+                              type="button"
+                              onClick={() => selectChofer(chofer)}
+                              className={`w-full flex items-center justify-between px-3 py-2.5 hover:bg-slate-900 transition-colors text-left border-b border-slate-800/30 last:border-b-0 cursor-pointer ${
+                                name === chofer.name ? 'bg-indigo-500/10' : ''
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-slate-200 truncate">{chofer.name}</p>
+                                <p className="text-[10px] text-slate-500 font-mono">
+                                  {chofer.rut} {chofer.plate ? `• ${chofer.plate}` : ''}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                  {chofer.plate || 'sin patente'}
+                                </span>
+                                {!chofer.active && (
+                                  <span className="text-[8px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold">
+                                    INACTIVO
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (chofer.active) {
+                                      onDeactivateChofer(chofer.id);
+                                    } else {
+                                      onReactivateChofer(chofer.id);
+                                    }
+                                  }}
+                                  className={`p-1 rounded transition-colors ${chofer.active ? 'text-rose-400 hover:bg-rose-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'}`}
+                                  title={chofer.active ? 'Desactivar chofer (ya no trabaja)' : 'Reactivar chofer'}
+                                >
+                                  {chofer.active ? <ToggleLeft className="w-3.5 h-3.5" /> : <ToggleRight className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
+                            </button>
+                          ))
+                        )}
+
+                        {/* Botón: mostrar/ocultar inactivos */}
+                        <button
+                          type="button"
+                          onClick={() => setShowInactivos(!showInactivos)}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-colors border-t border-slate-800/30 cursor-pointer"
+                        >
+                          {showInactivos ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                          {showInactivos ? 'Ocultar choferes inactivos' : `Mostrar inactivos (${choferes.filter(c => !c.active).length})`}
+                        </button>
+
+                        {/* Botón: agregar nuevo chofer */}
+                        <button
+                          type="button"
+                          onClick={() => setShowNewChoferForm(!showNewChoferForm)}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] font-bold text-indigo-400 hover:text-white hover:bg-indigo-500/10 transition-colors border-t border-slate-800/30 cursor-pointer"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          Agregar nuevo chofer
+                        </button>
+                      </div>
+
+                      {/* Formulario rápido para nuevo chofer */}
+                      {showNewChoferForm && (
+                        <div className="p-3 border-t border-[#2d3449] bg-slate-900/50 space-y-2">
+                          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Nuevo Chofer</p>
+                          <input
+                            type="text"
+                            value={newChoferName}
+                            onChange={e => setNewChoferName(e.target.value)}
+                            placeholder="Nombre completo"
+                            className="w-full bg-[#020617] border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+                          />
+                          <input
+                            type="text"
+                            value={newChoferRut}
+                            onChange={e => setNewChoferRut(e.target.value)}
+                            placeholder="RUT (ej. 12.345.678-9)"
+                            className="w-full bg-[#020617] border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleAddNewChofer}
+                              disabled={!newChoferName.trim() || !newChoferRut.trim()}
+                              className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3 inline mr-1" />
+                              Agregar y seleccionar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowNewChoferForm(false)}
+                              className="px-3 py-1.5 bg-slate-800 text-slate-300 text-[10px] font-bold rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Ej. Sarah Jenkins"
+                placeholder={isTruckType ? "Nombre del chofer (o seleccionar arriba)" : "Ej. Sarah Jenkins"}
                 className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-outline/40"
                 required
+                readOnly={isTruckType && !!name}
               />
             </div>
 
@@ -131,6 +353,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
                 placeholder="Ej. 19.453.120-K"
                 className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-outline/40"
                 required
+                readOnly={isTruckType && !!rut}
               />
             </div>
 
@@ -138,7 +361,11 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
               <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Clase / Tipo</label>
               <select
                 value={type}
-                onChange={e => setType(e.target.value as AccessType)}
+                onChange={e => {
+                  setType(e.target.value as AccessType);
+                  // Limpiar selección de chofer si cambia de tipo
+                  setShowChoferSelector(false);
+                }}
                 className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="VISITANTE">VISITANTE</option>
