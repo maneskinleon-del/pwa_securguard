@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Search, UserPlus, Plus, X, Check, Pencil, Trash2, ToggleLeft, ToggleRight, Truck } from 'lucide-react';
+import { Search, UserPlus, Plus, X, Check, Pencil, Trash2, ToggleLeft, ToggleRight, Truck, RotateCcw } from 'lucide-react';
 import { Chofer } from '../types';
 import { isValidRut, normalizeRut } from '../utils/rut';
 
@@ -19,11 +19,13 @@ interface ChoferesSectionProps {
   onDeactivateChofer: (id: string) => void;
   onReactivateChofer: (id: string) => void;
   onRemoveChofer: (id: string) => void;
+  onResetChoferes: () => void;
 }
 
-export function ChoferesSection({ choferes, onAddChofer, onUpdateChofer, onDeactivateChofer, onReactivateChofer, onRemoveChofer }: ChoferesSectionProps) {
+export function ChoferesSection({ choferes, onAddChofer, onUpdateChofer, onDeactivateChofer, onReactivateChofer, onRemoveChofer, onResetChoferes }: ChoferesSectionProps) {
   const [search, setSearch] = useState('');
-  const [showInactivos, setShowInactivos] = useState(false);
+  const [showInactivos, setShowInactivos] = useState(true);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
 
   // Nuevo chofer form
@@ -51,15 +53,17 @@ export function ChoferesSection({ choferes, onAddChofer, onUpdateChofer, onDeact
   const inactiveCount = choferes.length - activeCount;
 
   const filtered = useMemo(() => {
-    const list = showInactivos ? choferes : choferes.filter(c => c.active);
-    if (!search.trim()) return list;
-    const q = normalizeText(search);
-    return list.filter(c =>
-      normalizeText(c.name).includes(q) ||
-      normalizeText(c.rut).includes(q) ||
-      normalizeText(c.plate).includes(q) ||
-      normalizeText(c.unit).includes(q)
-    );
+    // Si hay búsqueda, buscar sobre TODOS los choferes (incluidos inactivos)
+    if (search.trim()) {
+      const q = normalizeText(search);
+      return choferes.filter(c =>
+        normalizeText(c.name).includes(q) ||
+        normalizeText(c.rut).includes(q) ||
+        normalizeText(c.plate).includes(q) ||
+        normalizeText(c.unit).includes(q)
+      );
+    }
+    return showInactivos ? choferes : choferes.filter(c => c.active);
   }, [choferes, search, showInactivos]);
 
   const resetNewForm = () => {
@@ -175,6 +179,35 @@ export function ChoferesSection({ choferes, onAddChofer, onUpdateChofer, onDeact
             Agregar chofer
           </button>
         </div>
+
+        {/* Restablecer lista inicial (si los datos quedaron viejos o incompletos) */}
+        {confirmReset ? (
+          <div className="flex items-center justify-between p-2 bg-amber-500/10 border border-amber-500/25 rounded-lg">
+            <span className="text-[10px] text-amber-300 font-bold">¿Restablecer lista inicial? Se reemplazarán los datos actuales.</span>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => { onResetChoferes(); setConfirmReset(false); }}
+                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[9px] font-bold rounded-lg transition-colors cursor-pointer"
+              >
+                Sí, restablecer
+              </button>
+              <button
+                onClick={() => setConfirmReset(false)}
+                className="px-2.5 py-1 bg-slate-800 text-slate-300 text-[9px] font-bold rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmReset(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-1 text-[9px] text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3 h-3 text-amber-500/70" />
+            Restablecer lista inicial de choferes
+          </button>
+        )}
       </div>
 
       {/* Formulario nuevo chofer */}

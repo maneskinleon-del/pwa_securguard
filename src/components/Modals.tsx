@@ -46,16 +46,18 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
     return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   };
 
-  // Choferes filtrados por búsqueda
+  // Choferes filtrados por búsqueda (si hay búsqueda, incluye inactivos)
   const filteredChoferes = useMemo(() => {
+    if (choferSearch.trim()) {
+      const q = normalizeText(choferSearch);
+      return choferes.filter(c =>
+        normalizeText(c.name).includes(q) ||
+        normalizeText(c.rut).includes(q) ||
+        normalizeText(c.plate).includes(q)
+      );
+    }
     const list = showInactivos ? choferes : activeChoferes;
-    if (!choferSearch.trim()) return list;
-    const q = normalizeText(choferSearch);
-    return list.filter(c =>
-      normalizeText(c.name).includes(q) ||
-      normalizeText(c.rut).includes(q) ||
-      normalizeText(c.plate).includes(q)
-    );
+    return list;
   }, [choferes, activeChoferes, choferSearch, showInactivos]);
 
   // Auto-completar patente y unidad al seleccionar un chofer

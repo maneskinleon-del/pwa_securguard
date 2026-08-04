@@ -47,6 +47,7 @@ export default function App() {
     deactivateChofer,
     reactivateChofer,
     removeChofer,
+    resetChoferes,
   } = useChoferesState();
 
   // Modal display toggles
@@ -187,6 +188,7 @@ export default function App() {
             onDeactivateChofer={deactivateChofer}
             onReactivateChofer={reactivateChofer}
             onRemoveChofer={removeChofer}
+            onResetChoferes={resetChoferes}
             onOpenImport={() => setIsImportOpen(true)}
             onResetDay={handleResetDay}
             onDeleteAll={handleDeleteAll}
@@ -254,7 +256,7 @@ export default function App() {
                 ? 'bg-slate-900 text-indigo-400 font-extrabold border border-indigo-950 scale-105 shadow-lg shadow-indigo-600/10'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
             } flex-1 max-w-[64px] h-12`}
-            title="Estadísticas de Personal y CCTV"
+            title="Gestión de Personas y Choferes"
           >
             <Users className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>

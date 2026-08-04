@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { Upload, Download, Trash2, Camera, ShieldAlert, BarChart2, Users, Flame, Maximize2, ShieldCheck, Check, LogIn, AlarmClock, ChevronRight, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Upload, Download, Trash2, ShieldAlert, BarChart2, Users, Check, LogIn, AlarmClock, ChevronRight, AlertTriangle } from 'lucide-react';
 import { LogItem, Persona, ActiveCheckIn, GuardProfile, IncidentReport, Chofer } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
@@ -22,15 +22,14 @@ interface PersonasTabProps {
   onDeactivateChofer: (id: string) => void;
   onReactivateChofer: (id: string) => void;
   onRemoveChofer: (id: string) => void;
+  onResetChoferes: () => void;
   onOpenImport: () => void;
   onResetDay: () => void;
   onDeleteAll: () => void;
   onImportPersonas: (personas: Persona[]) => void;
 }
 
-export function PersonasTab({ logs, activeInside = [], personas, profile, incidents, choferes, onAddChofer, onUpdateChofer, onDeactivateChofer, onReactivateChofer, onRemoveChofer, onOpenImport, onResetDay, onDeleteAll, onImportPersonas }: PersonasTabProps) {
-  const [selectedCamera, setSelectedCamera] = useState<'ENTRANCE_NORTH' | 'EXIT_SOUTH' | 'RESIDENCE_CIRCLE'>('ENTRANCE_NORTH');
-  const [isFullscreen, setIsFullscreen] = useState(false);
+export function PersonasTab({ logs, activeInside = [], personas, profile, incidents, choferes, onAddChofer, onUpdateChofer, onDeactivateChofer, onReactivateChofer, onRemoveChofer, onResetChoferes, onOpenImport, onResetDay, onDeleteAll, onImportPersonas }: PersonasTabProps) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [copiedSuccess, setCopiedSuccess] = useState(false);
 
@@ -171,96 +170,8 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
         onDeactivateChofer={onDeactivateChofer}
         onReactivateChofer={onReactivateChofer}
         onRemoveChofer={onRemoveChofer}
+        onResetChoferes={onResetChoferes}
       />
-
-      {/* Camera Simulator panel matching "LIVE FEED" layout as a massive Bento Box */}
-      <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] overflow-hidden shadow-lg">
-        <div className="flex items-center justify-between p-4 bg-[#1e293b]/30 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-            <h3 className="text-[10px] font-bold tracking-widest text-slate-300 uppercase">
-              CCTV FEED: REMOTE GATE
-            </h3>
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedCamera}
-              onChange={e => setSelectedCamera(e.target.value as any)}
-              className="bg-[#020617] text-[9px] font-bold uppercase tracking-wide text-indigo-400 border border-slate-800 rounded-lg px-2 py-1 focus:outline-none"
-            >
-              <option value="ENTRANCE_NORTH">ENTRANCE NORTH</option>
-              <option value="EXIT_SOUTH">EXIT GATE SOUTH</option>
-              <option value="RESIDENCE_CIRCLE">RESIDENCE LOBBY</option>
-            </select>
-            <button
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors"
-              title="Expand Feed"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Video stream sandbox box */}
-        <div className={`relative bg-black transition-all duration-300 overflow-hidden ${isFullscreen ? 'h-72' : 'h-44'}`}>
-          {/* Diagnostic Overlay HUD */}
-          <div className="absolute top-2 left-2 z-10 text-[9px] font-mono bg-black/80 px-2 py-1 rounded text-emerald-400 flex flex-col leading-tight border border-emerald-500/20">
-            <span>CAM_ID: SG_AI_{selectedCamera.substring(0, 4)}</span>
-            <span>FPS: 30.0 / ISO: 400</span>
-            <span>UTC_T: {new Date().toISOString().substring(11, 19)}</span>
-          </div>
-
-          <div className="absolute top-2 right-2 z-10 text-[9px] font-mono bg-rose-500/10 px-2 py-0.5 rounded text-rose-400 flex items-center gap-1 border border-rose-500/20 font-bold uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse"></span>
-            <span>LIVE REC</span>
-          </div>
-
-          {/* Animated visual noise static lines */}
-          <div className="absolute inset-0 opacity-[0.08] pointer-events-none bg-radial-gradient from-transparent to-black select-none z-10"></div>
-          
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-            <svg className="w-full h-full opacity-15" xmlns="http://www.w3.org/2000/svg">
-              <filter id="noise">
-                <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-                <feColorMatrix type="saturate" values="0" />
-              </filter>
-              <rect width="100%" height="100%" filter="url(#noise)" />
-            </svg>
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/10 to-transparent w-full h-[6px] animate-[bounce_4s_infinite] pointer-events-none"></div>
-          </div>
-
-          {/* CCTV dynamic illustration image placeholder */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            {selectedCamera === 'ENTRANCE_NORTH' ? (
-              <img
-                src="https://images.unsplash.com/photo-1558036117-15d82a90b9b1?auto=format&fit=crop&q=80&w=600"
-                alt="North Entrance Gate View"
-                className="w-full h-full object-cover opacity-60 grayscale filter contrast-125"
-              />
-            ) : selectedCamera === 'EXIT_SOUTH' ? (
-              <img
-                src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=600"
-                alt="Exit South Gate View"
-                className="w-full h-full object-cover opacity-60 grayscale filter contrast-125"
-              />
-            ) : (
-              <img
-                src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=600"
-                alt="Residence circle gate"
-                className="w-full h-full object-cover opacity-60 grayscale filter contrast-125"
-              />
-            )}
-            
-            {/* Visual Crosshair HUD overlay */}
-            <div className="absolute w-12 h-12 border border-[#4edea3]/45 pointer-events-none rounded-full flex items-center justify-center">
-              <div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>
-            </div>
-            <div className="absolute top-4 left-1/4 right-1/4 border-t border-dashed border-[#4edea3]/25 pointer-events-none"></div>
-            <div className="absolute bottom-4 left-1/4 right-1/4 border-b border-dashed border-[#4edea3]/25 pointer-events-none"></div>
-          </div>
-        </div>
-      </section>
 
       {/* DB controller list on bottom as a sleek Bento box */}
       <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] overflow-hidden shadow-lg p-3">

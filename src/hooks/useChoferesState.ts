@@ -77,6 +77,11 @@ export function useChoferesState() {
     setChoferes(prev => prev.filter(c => c.id !== id));
   };
 
+  /** Restablecer la lista a los choferes iniciales (recargar catálogo) */
+  const resetChoferes = () => {
+    setChoferes(INITIAL_CHOFERES);
+  };
+
   /** Obtener solo choferes activos */
   const activeChoferes = choferes.filter(c => c.active);
 
@@ -92,6 +97,7 @@ export function useChoferesState() {
     deactivateChofer,
     reactivateChofer,
     removeChofer,
+    resetChoferes,
     setChoferes,
   };
 }
