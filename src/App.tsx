@@ -48,6 +48,7 @@ export default function App() {
     reactivateChofer,
     removeChofer,
     resetChoferes,
+    clearChoferes,
   } = useChoferesState();
 
   // Modal display toggles
@@ -102,6 +103,12 @@ export default function App() {
   const openRegister = (preset?: AccessType) => {
     setRegisterPreset(preset || 'VISITANTE');
     setIsRegisterOpen(true);
+  };
+
+  // "Cargar limpio": eliminar toda la bitácora Y vaciar también el catálogo de choferes
+  const handleFullReset = () => {
+    handleDeleteAll();
+    clearChoferes();
   };
 
   return (
@@ -191,7 +198,7 @@ export default function App() {
             onResetChoferes={resetChoferes}
             onOpenImport={() => setIsImportOpen(true)}
             onResetDay={handleResetDay}
-            onDeleteAll={handleDeleteAll}
+            onDeleteAll={handleFullReset}
             onImportPersonas={handleImportedPersonas}
           />
         )}
@@ -203,7 +210,7 @@ export default function App() {
             incidents={incidents}
             onResolveIncident={handleResolveIncident}
             onResetDay={handleResetDay}
-            onDeleteAll={handleDeleteAll}
+            onDeleteAll={handleFullReset}
             onExportBackup={handleExportBackup}
           />
         )}

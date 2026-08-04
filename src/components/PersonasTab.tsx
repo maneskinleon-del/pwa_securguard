@@ -232,7 +232,7 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
               <div className="space-y-3 bg-[#b91c1c]/10 p-3.5 rounded-2xl border border-[#b91c1c]/30">
                 <div className="flex items-center gap-2 text-red-100 font-bold">
                   <ShieldAlert className="w-5 h-5 flex-shrink-0 text-red-400" />
-                  <p className="text-[11px] leading-tight text-slate-200">¿ESTÁS SEGURO? Esta acción removerá todo el historial local permanentemente.</p>
+                  <p className="text-[11px] leading-tight text-slate-200">¿ESTÁS SEGURO? Esta acción removerá todo el historial local y vaciará la lista de choferes permanentemente.</p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -257,8 +257,8 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
                 <div className="flex items-center gap-3">
                   <Trash2 className="w-5 h-5 text-red-400 group-hover:scale-110 transition-transform" />
                   <div>
-                    <h4 className="font-bold text-xs text-red-400">ELIMINAR TODA LA BITÁCORA</h4>
-                    <p className="text-[10px] text-slate-500">Vacía el registro de actividad y restablece los valores locales de fábrica.</p>
+                    <h4 className="font-bold text-xs text-red-400">ELIMINAR TODA LA BITÁCORA Y CHOFERES</h4>
+                    <p className="text-[10px] text-slate-500">Vacía el registro de actividad y el catálogo de choferes para dejar todo limpio.</p>
                   </div>
                 </div>
                 <AlertTriangle className="w-5 h-5 text-red-500/60" />

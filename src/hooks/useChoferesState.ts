@@ -10,7 +10,12 @@ import { useEffect, useState } from 'react';
 import { Chofer } from '../types';
 import { INITIAL_CHOFERES } from '../data/mockChoferes';
 
-const STORAGE_KEY = 'securguard_choferes';
+const STORAGE_KEY = 'securguard_choferes_v1';
+const LEGACY_STORAGE_KEY = 'securguard_choferes'; // v0 (deploys viejos) — se limpia al migrar
+
+// En v0 la lista quedaba persistida parcialmente en localStorage de deploys
+// viejos. Al cambiar la key a v1, todos los clientes vuelven a sembrar el
+// catálogo inicial completo (12 choferes) en el primer arranque.
 
 const readArray = (key: string): any[] | null => {
   try {
@@ -41,6 +46,10 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 
 export function useChoferesState() {
   const [choferes, setChoferes] = useState<Chofer[]>(() => {
+    // Migración: descartar datos v0 que quedaron huérfanos de deploys antiguos
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch { /* localStorage no disponible */ }
     const arr = readArray(STORAGE_KEY);
     return arr ? sanitizeChoferes(arr) : INITIAL_CHOFERES;
   });
@@ -82,6 +91,11 @@ export function useChoferesState() {
     setChoferes(INITIAL_CHOFERES);
   };
 
+  /** Vaciar por completo el catálogo de choferes (para "cargar limpio") */
+  const clearChoferes = () => {
+    setChoferes([]);
+  };
+
   /** Obtener solo choferes activos */
   const activeChoferes = choferes.filter(c => c.active);
 
@@ -98,6 +112,7 @@ export function useChoferesState() {
     reactivateChofer,
     removeChofer,
     resetChoferes,
+    clearChoferes,
     setChoferes,
   };
 }
