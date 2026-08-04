@@ -23,7 +23,8 @@ const readArray = (key: string): any[] | null => {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : null;
+    // Treat empty arrays as no-data so defaults are loaded on fresh/cleared state
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
   } catch (e) {
     console.error(`[rehydrate] No se pudo parsear ${key}; usando valores por defecto.`, e);
     return null;
@@ -93,6 +94,16 @@ const sanitizeIncidents = (arr: any[]): IncidentReport[] =>
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
+// Default personas shipped with the app — used on first load and for restore
+const DEFAULT_PERSONAS: Persona[] = [
+  { id: 'per-1', name: 'Sarah Jenkins', rut: '19.453.120-K', type: 'VISITANTE', unit: 'Unit 115', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120' },
+  { id: 'per-2', name: 'James Wilson', rut: '15.823.149-6', type: 'CONTRATISTA', unit: 'Service/Cleaning', plate: 'ABC-123', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120' },
+  { id: 'per-3', name: 'Jonathan Wick', rut: '12.443.512-4', type: 'CONTRATISTA', unit: 'Security Contractor', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120' },
+  { id: 'per-4', name: 'Elena Vance', rut: '20.198.543-2', type: 'VISITANTE', unit: 'Unit 204' },
+  { id: 'per-5', name: 'Clara Ocampo', rut: '16.892.110-3', type: 'CONTRATISTA', unit: 'Mantenimiento Ascensores', plate: 'GH-89-12' },
+  { id: 'per-6', name: 'Mario Rossi', rut: '21.332.901-K', type: 'VISITANTE', unit: 'Depto 1102' },
+];
+
 export interface AppState {
   // Data
   logs: LogItem[];
@@ -106,10 +117,12 @@ export interface AppState {
   handleSaveRegister: (newEntry: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>) => void;
   handleSaveIncident: (newIncident: Omit<IncidentReport, 'id' | 'time' | 'date' | 'reporter' | 'gate'>) => void;
   handleImportedPersonas: (incoming: Persona[]) => void;
+  handleUpdatePersona: (updated: Persona) => void;
+  handleRestoreDefaults: () => void;
   handleQuickCheckIn: (persona: Persona) => void;
   handleResetDay: () => void;
   handleExportBackup: () => void;
-  handleDeleteAll: () => void;
+  handleFactoryReset: () => void;
   handleResolveIncident: (id: string) => void;
   handleCompleteHandover: (nextGuardName: string) => void;
 }
@@ -158,15 +171,7 @@ export const useAppState = (): AppState => {
 
   const [personas, setPersonas] = useState<Persona[]>(() => {
     const arr = readArray('securguard_personas');
-    if (arr) return sanitizePersonas(arr);
-    return [
-      { id: 'per-1', name: 'Sarah Jenkins', rut: '19.453.120-K', type: 'VISITANTE', unit: 'Unit 115', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120' },
-      { id: 'per-2', name: 'James Wilson', rut: '15.823.149-6', type: 'CONTRATISTA', unit: 'Service/Cleaning', plate: 'ABC-123', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120' },
-      { id: 'per-3', name: 'Jonathan Wick', rut: '12.443.512-4', type: 'CONTRATISTA', unit: 'Security Contractor', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120' },
-      { id: 'per-4', name: 'Elena Vance', rut: '20.198.543-2', type: 'VISITANTE', unit: 'Unit 204' },
-      { id: 'per-5', name: 'Clara Ocampo', rut: '16.892.110-3', type: 'CONTRATISTA', unit: 'Mantenimiento Ascensores', plate: 'GH-89-12' },
-      { id: 'per-6', name: 'Mario Rossi', rut: '21.332.901-K', type: 'VISITANTE', unit: 'Depto 1102' },
-    ];
+    return arr ? sanitizePersonas(arr) : DEFAULT_PERSONAS;
   });
 
   // Sync to local storage
@@ -319,6 +324,10 @@ export const useAppState = (): AppState => {
     }
   };
 
+  const handleUpdatePersona = (updated: Persona) => {
+    setPersonas(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
+  };
+
   const handleImportedPersonas = (incoming: Persona[]) => {
     setPersonas(prev => {
       const map = new Map<string, Persona>();
@@ -423,15 +432,20 @@ export const useAppState = (): AppState => {
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
-  const handleDeleteAll = () => {
+  // Factory reset: wipe everything including the persona master base
+  const handleFactoryReset = () => {
     setLogs([]);
     setIncidents([]);
-    setPersonas([]);
+    setPersonas(DEFAULT_PERSONAS);
     setActiveInside([]);
     localStorage.removeItem('securguard_logs');
     localStorage.removeItem('securguard_incidents');
     localStorage.removeItem('securguard_personas');
     localStorage.removeItem('securguard_active_inside');
+  };
+
+  const handleRestoreDefaults = () => {
+    setPersonas(DEFAULT_PERSONAS);
   };
 
   const handleResolveIncident = (id: string) => {
@@ -471,10 +485,12 @@ export const useAppState = (): AppState => {
     handleSaveRegister,
     handleSaveIncident,
     handleImportedPersonas,
+    handleUpdatePersona,
+    handleRestoreDefaults,
     handleQuickCheckIn,
     handleResetDay,
     handleExportBackup,
-    handleDeleteAll,
+    handleFactoryReset,
     handleResolveIncident,
     handleCompleteHandover,
   };

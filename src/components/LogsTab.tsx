@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Download, AlertTriangle, RefreshCw, Lock, Unlock, LogIn, LogOut, Truck, Sparkles, User, CheckCircle, Database, Users } from 'lucide-react';
+import { Search, Download, AlertTriangle, RefreshCw, Lock, Unlock, LogIn, LogOut, Truck, Sparkles, User, CheckCircle, Database, Users, Pencil } from 'lucide-react';
 import { LogItem, AccessType, Persona, ActiveCheckIn } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { csvDownload } from '../utils/csv';
@@ -18,6 +18,7 @@ interface LogsTabProps {
   onOpenRegister: (presetType?: AccessType) => void;
   onOpenIncident: () => void;
   onOpenHandover: () => void;
+  onEditPersona: (persona: Persona) => void;
   emergencyLock: boolean;
   onToggleLock: () => void;
 }
@@ -31,6 +32,7 @@ export function LogsTab({
   onOpenRegister,
   onOpenIncident,
   onOpenHandover,
+  onEditPersona,
   emergencyLock,
   onToggleLock
 }: LogsTabProps) {
@@ -53,7 +55,8 @@ export function LogsTab({
       normalizeText(p.name).includes(query) ||
       normalizeText(p.rut).includes(query) ||
       (p.plate && normalizeText(p.plate).includes(query)) ||
-      normalizeText(p.unit).includes(query);
+      normalizeText(p.unit).includes(query) ||
+      normalizeText(p.type).includes(query);
 
     if (!matchesSearch) return false;
 
@@ -248,7 +251,15 @@ export function LogsTab({
                     <span className="px-1.5 py-0.2 rounded bg-slate-900 text-[8px] font-bold text-slate-500 uppercase tracking-widest hidden sm:inline border border-slate-800/40">
                       {persona.type}
                     </span>
-                    
+
+                    <button
+                      onClick={() => onEditPersona(persona)}
+                      className="p-1 rounded-md hover:bg-slate-800 text-slate-500 hover:text-[#818cf8] transition-colors cursor-pointer"
+                      title="Editar persona"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+
                     {isInside ? (
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
                         <span className="bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md text-[9px] font-bold text-emerald-400 flex items-center gap-1">

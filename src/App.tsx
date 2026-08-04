@@ -5,12 +5,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shield, Bell, Plus, Siren, Settings2, History, Users, MonitorSmartphone } from 'lucide-react';
-import { AccessType } from './types';
+import { AccessType, Persona } from './types';
 import { ControlTab } from './components/ControlTab';
 import { LogsTab } from './components/LogsTab';
 import { PersonasTab } from './components/PersonasTab';
 import { SettingsTab } from './components/SettingsTab';
-import { RegisterModal, IncidentModal, JsonImportModal, ShiftHandoverModal } from './components/Modals';
+import { RegisterModal, IncidentModal, JsonImportModal, ShiftHandoverModal, EditPersonaModal } from './components/Modals';
 import { useAppState } from './hooks/useAppState';
 
 export default function App() {
@@ -32,9 +32,11 @@ export default function App() {
     handleQuickCheckIn,
     handleResetDay,
     handleExportBackup,
-    handleDeleteAll,
+    handleFactoryReset,
     handleResolveIncident,
     handleCompleteHandover,
+    handleUpdatePersona,
+    handleRestoreDefaults,
   } = useAppState();
 
   // Modal display toggles
@@ -43,6 +45,8 @@ export default function App() {
   const [isIncidentOpen, setIsIncidentOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isHandoverOpen, setIsHandoverOpen] = useState(false);
+  const [isEditPersonaOpen, setIsEditPersonaOpen] = useState(false);
+  const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
 
   // Emergency lockdown toggle (estado de UI, no persiste en profile)
   const [emergencyLock, setEmergencyLock] = useState<boolean>(() => {
@@ -157,6 +161,7 @@ export default function App() {
             onOpenRegister={(preset) => openRegister(preset)}
             onOpenIncident={() => setIsIncidentOpen(true)}
             onOpenHandover={() => setIsHandoverOpen(true)}
+            onEditPersona={(persona) => { setEditingPersona(persona); setIsEditPersonaOpen(true); }}
             emergencyLock={emergencyLock}
             onToggleLock={() => setEmergencyLock(!emergencyLock)}
           />
@@ -171,8 +176,10 @@ export default function App() {
             incidents={incidents}
             onOpenImport={() => setIsImportOpen(true)}
             onResetDay={handleResetDay}
-            onDeleteAll={handleDeleteAll}
+            onDeleteAll={handleResetDay}
             onImportPersonas={handleImportedPersonas}
+            onRestoreDefaults={handleRestoreDefaults}
+            onEditPersona={(persona) => { setEditingPersona(persona); setIsEditPersonaOpen(true); }}
           />
         )}
 
@@ -183,7 +190,7 @@ export default function App() {
             incidents={incidents}
             onResolveIncident={handleResolveIncident}
             onResetDay={handleResetDay}
-            onDeleteAll={handleDeleteAll}
+            onDeleteAll={handleFactoryReset}
             onExportBackup={handleExportBackup}
           />
         )}
@@ -282,6 +289,13 @@ export default function App() {
         onClose={() => setIsHandoverOpen(false)}
         onComplete={handleCompleteHandover}
         currentGuard={profile.name}
+      />
+
+      <EditPersonaModal
+        isOpen={isEditPersonaOpen}
+        onClose={() => { setIsEditPersonaOpen(false); setEditingPersona(null); }}
+        onSave={handleUpdatePersona}
+        persona={editingPersona}
       />
 
       {/* Floating System-wide Overlay Toast Notification */}

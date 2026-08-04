@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ShieldAlert, Plus, Save, FileSpreadsheet, Upload, Key, User, Flame } from 'lucide-react';
 import { LogItem, IncidentReport, AccessType, Persona } from '../types';
 import { isValidRut, normalizeRut } from '../utils/rut';
@@ -551,6 +551,148 @@ export function ShiftHandoverModal({ isOpen, onClose, onComplete, currentGuard }
               className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-secondary text-on-secondary hover:bg-secondary-container transition-colors cursor-pointer"
             >
               Confirmar Handover
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface EditPersonaModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updated: Persona) => void;
+  persona: Persona | null;
+}
+
+export function EditPersonaModal({ isOpen, onClose, onSave, persona }: EditPersonaModalProps) {
+  const [name, setName] = useState('');
+  const [rut, setRut] = useState('');
+  const [plate, setPlate] = useState('');
+  const [type, setType] = useState<AccessType>('VISITANTE');
+  const [unit, setUnit] = useState('');
+
+  // Sync form state when persona changes
+  useEffect(() => {
+    if (persona) {
+      setName(persona.name);
+      setRut(persona.rut);
+      setPlate(persona.plate || '');
+      setType(persona.type);
+      setUnit(persona.unit);
+    }
+  }, [persona]);
+
+  if (!isOpen || !persona) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !rut.trim() || !unit.trim()) {
+      alert('Nombre, RUT y Unidad son obligatorios.');
+      return;
+    }
+    if (!isValidRut(rut)) {
+      alert('El RUT ingresado no es válido.');
+      return;
+    }
+    onSave({
+      ...persona,
+      name: name.trim(),
+      rut: normalizeRut(rut),
+      plate: plate.trim() || undefined,
+      type,
+      unit: unit.trim(),
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl glass-card bg-[#111a2e] border border-[#2d3449] shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-[#2d3449] bg-[#171f33]">
+          <div className="flex items-center gap-2 text-primary">
+            <User className="w-5 h-5" />
+            <h3 className="text-lg font-semibold text-[#dae2fd]">Editar Persona</h3>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-full text-outline hover:bg-surface-bright transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Nombre Completo *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">RUT / Identificación *</label>
+            <input
+              type="text"
+              value={rut}
+              onChange={e => setRut(e.target.value)}
+              className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Patente</label>
+            <input
+              type="text"
+              value={plate}
+              onChange={e => setPlate(e.target.value)}
+              placeholder="Ej. ABCD-12"
+              className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary uppercase"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Clase / Tipo</label>
+            <select
+              value={type}
+              onChange={e => setType(e.target.value as AccessType)}
+              className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="VISITANTE">VISITANTE</option>
+              <option value="CONTRATISTA">CONTRATISTA</option>
+              <option value="ENTREGA">ENTREGA</option>
+              <option value="CAMION">CAMION</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Destino / Unidad *</label>
+            <input
+              type="text"
+              value={unit}
+              onChange={e => setUnit(e.target.value)}
+              className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-[#2d3449]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 text-sm font-semibold rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface-variant"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2 text-sm font-semibold rounded-xl bg-primary text-on-primary hover:bg-[#c0c1ff]/85 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              Guardar Cambios
             </button>
           </div>
         </form>

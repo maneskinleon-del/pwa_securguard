@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, Trash2, Camera, ShieldAlert, BarChart2, Users, Flame, Maximize2, ShieldCheck, Check, LogIn, AlarmClock, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Upload, Download, Trash2, Camera, ShieldAlert, BarChart2, Users, Flame, Maximize2, ShieldCheck, Check, LogIn, AlarmClock, ChevronRight, AlertTriangle, RotateCcw, Truck, User, Pencil } from 'lucide-react';
 import { LogItem, Persona, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
@@ -19,9 +19,11 @@ interface PersonasTabProps {
   onResetDay: () => void;
   onDeleteAll: () => void;
   onImportPersonas: (personas: Persona[]) => void;
+  onRestoreDefaults: () => void;
+  onEditPersona: (persona: Persona) => void;
 }
 
-export function PersonasTab({ logs, activeInside = [], personas, profile, incidents, onOpenImport, onResetDay, onDeleteAll, onImportPersonas }: PersonasTabProps) {
+export function PersonasTab({ logs, activeInside = [], personas, profile, incidents, onOpenImport, onResetDay, onDeleteAll, onImportPersonas, onRestoreDefaults, onEditPersona }: PersonasTabProps) {
   const [selectedCamera, setSelectedCamera] = useState<'ENTRANCE_NORTH' | 'EXIT_SOUTH' | 'RESIDENCE_CIRCLE'>('ENTRANCE_NORTH');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -156,6 +158,96 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
         </div>
       </section>
 
+      {/* Directorio de Choferes / Personas */}
+      <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] p-6 space-y-4 shadow-lg">
+        <div className="flex items-center justify-between border-b border-slate-800/50 pb-3">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-slate-400" />
+            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Directorio de Choferes / Personas</h2>
+          </div>
+          <span className="bg-[#4f46e5]/10 border border-[#4f46e5]/20 px-2.5 py-0.5 rounded-full text-[9px] font-bold text-indigo-400 flex items-center gap-1">
+            <span className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></span>
+            {personas.length} registros
+          </span>
+        </div>
+
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          {personas.length === 0 ? (
+            <div className="p-8 text-center bg-[#020617] rounded-xl border border-slate-800 text-slate-500 text-xs">
+              No hay personas registradas. Importa un archivo JSON o restaura personas de ejemplo.
+            </div>
+          ) : (
+            personas.map((persona, index) => {
+              const isInside = activeInside.some(
+                s => s.rut && persona.rut && s.rut.trim().toUpperCase() === persona.rut.trim().toUpperCase()
+              );
+              return (
+                <div
+                  key={persona.id || `persona-${index}`}
+                  className="flex items-center justify-between p-3 bg-[#020617] hover:bg-slate-900 transition-all rounded-xl border border-slate-800/40"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative">
+                      {persona.avatar ? (
+                        <img
+                          src={persona.avatar}
+                          alt={persona.name}
+                          referrerPolicy="no-referrer"
+                          className="w-9 h-9 rounded-full object-cover border border-slate-700"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-[#0f172a] flex items-center justify-center border border-slate-800 text-slate-400">
+                          {persona.type === 'CAMION' || persona.type === 'ENTREGA' ? (
+                            <Truck className="w-4 h-4 text-slate-400" />
+                          ) : (
+                            <User className="w-4 h-4 text-slate-400" />
+                          )}
+                        </div>
+                      )}
+                      {isInside && (
+                        <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full border border-[#020617] animate-pulse"></span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xs text-white leading-tight">
+                        {persona.name}
+                        {persona.plate && (
+                          <span className="ml-1.5 px-1 py-0.2 rounded bg-amber-500/15 text-amber-400 text-[8px] font-bold border border-amber-500/20">
+                            {persona.plate}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                        <span className="font-medium text-slate-500">{persona.rut}</span> • 
+                        <span className="text-indigo-400/90">{persona.unit}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.2 rounded bg-slate-900 text-[8px] font-bold text-slate-500 uppercase tracking-widest border border-slate-800/40">
+                      {persona.type}
+                    </span>
+                    {isInside && (
+                      <span className="bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md text-[9px] font-bold text-emerald-400 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
+                        EN RECINTO
+                      </span>
+                    )}
+                    <button
+                      onClick={() => onEditPersona(persona)}
+                      className="p-1.5 rounded-md hover:bg-slate-800 text-slate-500 hover:text-[#818cf8] transition-colors cursor-pointer"
+                      title="Editar persona"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
+
       {/* Camera Simulator panel matching "LIVE FEED" layout as a massive Bento Box */}
       <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] overflow-hidden shadow-lg">
         <div className="flex items-center justify-between p-4 bg-[#1e293b]/30 border-b border-slate-800">
@@ -259,6 +351,21 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
               <div>
                 <h4 className="font-bold text-xs text-slate-200">IMPORTAR PERSONAS / DIRECTORIO (.JSON)</h4>
                 <p className="text-[10px] text-slate-500">Incorpora listados pre-registrados para habilitar ingresos rápidos en la consola.</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-slate-600" />
+          </button>
+
+          {/* Action 1.5: Restore Defaults */}
+          <button
+            onClick={onRestoreDefaults}
+            className="w-full flex items-center justify-between p-4 bg-transparent hover:bg-slate-900 transition-colors text-left cursor-pointer group rounded-xl"
+          >
+            <div className="flex items-center gap-3">
+              <RotateCcw className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+              <div>
+                <h4 className="font-bold text-xs text-slate-200">RESTAURAR PERSONAS DE EJEMPLO</h4>
+                <p className="text-[10px] text-slate-500">Carga la lista inicial de demostración (6 personas) para probar el sistema.</p>
               </div>
             </div>
             <ChevronRight className="w-5 h-5 text-slate-600" />
