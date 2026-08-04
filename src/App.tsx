@@ -143,6 +143,7 @@ export default function App() {
           <ControlTab
             logs={logs}
             activeInside={activeInside}
+            personas={personas}
             profile={profile}
             incidents={incidents}
             onMarkExit={handleMarkExit}

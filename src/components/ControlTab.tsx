@@ -5,13 +5,14 @@
 
 import React, { useState } from 'react';
 import { Search, Loader2, CheckCircle2, Shield, Bell, LogIn, ExternalLink, Download, History } from 'lucide-react';
-import { LogItem, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
+import { LogItem, ActiveCheckIn, GuardProfile, IncidentReport, Persona } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
 
 interface ControlTabProps {
   logs: LogItem[];
   activeInside: ActiveCheckIn[];
+  personas: Persona[];
   profile: GuardProfile;
   incidents: IncidentReport[];
   onMarkExit: (id: string) => void;
@@ -20,7 +21,7 @@ interface ControlTabProps {
   clock: string;
 }
 
-export function ControlTab({ logs, activeInside, profile, incidents, onMarkExit, onOpenRegister, onResetDay, clock }: ControlTabProps) {
+export function ControlTab({ logs, activeInside, personas, profile, incidents, onMarkExit, onOpenRegister, onResetDay, clock }: ControlTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingExits, setLoadingExits] = useState<{ [key: string]: boolean }>({});
   const [recordedExits, setRecordedExits] = useState<{ [key: string]: boolean }>({});
@@ -45,22 +46,33 @@ export function ControlTab({ logs, activeInside, profile, incidents, onMarkExit,
     }, 400);
   };
 
+  // Helper: find current persona data by RUT (for display purposes)
+  const findPersona = (rut?: string) => {
+    if (!rut) return null;
+    const norm = rut.trim().toUpperCase();
+    return personas.find(p => p.rut && p.rut.trim().toUpperCase() === norm) || null;
+  };
+
   // Build the list of items from activeInside (mapped as active status) OR deep history logs
+  // Merge with current persona data so UI reflects latest edits (plate, name, etc.)
   const displayLogs = viewMode === 'inside'
-    ? activeInside.map(item => ({
-        id: item.id,
-        name: item.name || 'Desconocido',
-        rut: item.rut || '',
-        plate: item.plate,
-        type: item.type || 'VISITANTE',
-        unit: item.unit || 'N/A',
-        action: 'Entrada' as const,
-        time: item.entryTime,
-        date: item.entryDate,
-        avatar: item.avatar,
-        status: 'active' as const,
-        entryTimestamp: item.entryTimestamp
-      }))
+    ? activeInside.map(item => {
+        const current = findPersona(item.rut);
+        return {
+          id: item.id,
+          name: current?.name || item.name || 'Desconocido',
+          rut: item.rut || '',
+          plate: current?.plate ?? item.plate,
+          type: (current?.type || item.type || 'VISITANTE') as any,
+          unit: current?.unit || item.unit || 'N/A',
+          action: 'Entrada' as const,
+          time: item.entryTime,
+          date: item.entryDate,
+          avatar: current?.avatar ?? item.avatar,
+          status: 'active' as const,
+          entryTimestamp: item.entryTimestamp
+        };
+      })
     : logs;
 
   const normalizeText = (text?: string | null) => {

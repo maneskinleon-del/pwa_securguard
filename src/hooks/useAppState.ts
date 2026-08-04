@@ -326,15 +326,10 @@ export const useAppState = (): AppState => {
   };
 
   const handleUpdatePersona = (updated: Persona) => {
-    // Update the persona master record
+    // Only update the master persona record — do NOT touch activeInside.
+    // Active sessions preserve the data as it was at entry time (immutable
+    // snapshots) so entry/exit logs stay consistent.
     setPersonas(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
-    // If the person is currently inside, sync the active session too
-    setActiveInside(prev => prev.map(s => {
-      if (s.id === updated.id || (s.rut && updated.rut && s.rut.trim().toUpperCase() === updated.rut.trim().toUpperCase())) {
-        return { ...s, name: updated.name, rut: updated.rut, plate: updated.plate, type: updated.type, unit: updated.unit, avatar: updated.avatar };
-      }
-      return s;
-    }));
   };
 
   const handleRemovePersona = (id: string) => {
