@@ -46,6 +46,7 @@ export default function App() {
     updateChofer,
     deactivateChofer,
     reactivateChofer,
+    removeChofer,
   } = useChoferesState();
 
   // Modal display toggles
@@ -180,6 +181,12 @@ export default function App() {
             personas={personas}
             profile={profile}
             incidents={incidents}
+            choferes={choferes}
+            onAddChofer={addChofer}
+            onUpdateChofer={updateChofer}
+            onDeactivateChofer={deactivateChofer}
+            onReactivateChofer={reactivateChofer}
+            onRemoveChofer={removeChofer}
             onOpenImport={() => setIsImportOpen(true)}
             onResetDay={handleResetDay}
             onDeleteAll={handleDeleteAll}

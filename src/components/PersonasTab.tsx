@@ -5,9 +5,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Upload, Download, Trash2, Camera, ShieldAlert, BarChart2, Users, Flame, Maximize2, ShieldCheck, Check, LogIn, AlarmClock, ChevronRight, AlertTriangle } from 'lucide-react';
-import { LogItem, Persona, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
+import { LogItem, Persona, ActiveCheckIn, GuardProfile, IncidentReport, Chofer } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
+import { ChoferesSection } from './ChoferesSection';
 
 interface PersonasTabProps {
   logs: LogItem[];
@@ -15,13 +16,19 @@ interface PersonasTabProps {
   personas: Persona[];
   profile: GuardProfile;
   incidents: IncidentReport[];
+  choferes: Chofer[];
+  onAddChofer: (chofer: Omit<Chofer, 'id'>) => Chofer;
+  onUpdateChofer: (id: string, changes: Partial<Chofer>) => void;
+  onDeactivateChofer: (id: string) => void;
+  onReactivateChofer: (id: string) => void;
+  onRemoveChofer: (id: string) => void;
   onOpenImport: () => void;
   onResetDay: () => void;
   onDeleteAll: () => void;
   onImportPersonas: (personas: Persona[]) => void;
 }
 
-export function PersonasTab({ logs, activeInside = [], personas, profile, incidents, onOpenImport, onResetDay, onDeleteAll, onImportPersonas }: PersonasTabProps) {
+export function PersonasTab({ logs, activeInside = [], personas, profile, incidents, choferes, onAddChofer, onUpdateChofer, onDeactivateChofer, onReactivateChofer, onRemoveChofer, onOpenImport, onResetDay, onDeleteAll, onImportPersonas }: PersonasTabProps) {
   const [selectedCamera, setSelectedCamera] = useState<'ENTRANCE_NORTH' | 'EXIT_SOUTH' | 'RESIDENCE_CIRCLE'>('ENTRANCE_NORTH');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -155,6 +162,16 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
           </div>
         </div>
       </section>
+
+      {/* Gestión de Choferes (Variante B: editar/eliminar inline) — utilidad real */}
+      <ChoferesSection
+        choferes={choferes}
+        onAddChofer={onAddChofer}
+        onUpdateChofer={onUpdateChofer}
+        onDeactivateChofer={onDeactivateChofer}
+        onReactivateChofer={onReactivateChofer}
+        onRemoveChofer={onRemoveChofer}
+      />
 
       {/* Camera Simulator panel matching "LIVE FEED" layout as a massive Bento Box */}
       <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] overflow-hidden shadow-lg">

@@ -34,6 +34,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
   const [choferSearch, setChoferSearch] = useState('');
   const [showInactivos, setShowInactivos] = useState(false);
   const [showNewChoferForm, setShowNewChoferForm] = useState(false);
+  const [selectedChoferId, setSelectedChoferId] = useState<string | null>(null);
   // Nuevo chofer form
   const [newChoferName, setNewChoferName] = useState('');
   const [newChoferRut, setNewChoferRut] = useState('');
@@ -65,6 +66,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
     setUnit(chofer.unit || 'Aparcadero');
     setShowChoferSelector(false);
     setChoferSearch('');
+    setSelectedChoferId(chofer.id);
   };
 
   // Agregar nuevo chofer desde el formulario rápido
@@ -92,6 +94,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
       setShowNewChoferForm(false);
       setNewChoferName('');
       setNewChoferRut('');
+      setSelectedChoferId(null);
     }
   }, [isOpen]);
 
@@ -123,6 +126,16 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
       unit,
       avatar: chosenUrl
     });
+
+    // Sincronizar patente del chofer en el catálogo si el guardia la modificó
+    if (selectedChoferId && isTruckType && plate.trim()) {
+      const chofer = choferes.find(c => c.id === selectedChoferId);
+      const newPlate = plate.trim().toUpperCase();
+      if (chofer && newPlate !== (chofer.plate || '').trim().toUpperCase()) {
+        onUpdateChofer(selectedChoferId, { plate: newPlate });
+      }
+    }
+
     // Reset form
     setName('');
     setRut('');
@@ -130,6 +143,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
     setUnit('');
     setChoferSearch('');
     setShowChoferSelector(false);
+    setSelectedChoferId(null);
     onClose();
   };
 
@@ -365,6 +379,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
                   setType(e.target.value as AccessType);
                   // Limpiar selección de chofer si cambia de tipo
                   setShowChoferSelector(false);
+                  setSelectedChoferId(null);
                 }}
                 className="w-full bg-[#171f33] border border-[#2d3449] rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               >
