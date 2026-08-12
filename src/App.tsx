@@ -178,7 +178,7 @@ export default function App() {
             incidents={incidents}
             onOpenImport={() => setIsImportOpen(true)}
             onResetDay={handleResetDay}
-            onDeleteAll={handleResetDay}
+            onDeleteAll={handleFactoryReset}
             onImportPersonas={handleImportedPersonas}
             onRestoreDefaults={handleRestoreDefaults}
             onEditPersona={(persona) => { setEditingPersona(persona); setIsEditPersonaOpen(true); }}
