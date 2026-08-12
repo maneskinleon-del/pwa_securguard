@@ -412,11 +412,10 @@ export const useAppState = (): AppState => {
     setLogs([]);
     setIncidents([]);
     setActiveInside([]);
-    setPersonas([]);
+    // Do NOT clear setPersonas()! This preserves master base
     localStorage.removeItem('securguard_logs');
     localStorage.removeItem('securguard_incidents');
     localStorage.removeItem('securguard_active_inside');
-    localStorage.removeItem('securguard_personas');
   };
 
   const handleExportBackup = () => {
