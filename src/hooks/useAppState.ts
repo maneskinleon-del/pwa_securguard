@@ -121,6 +121,7 @@ export interface AppState {
   handleUpdatePersona: (updated: Persona) => void;
   handleRemovePersona: (id: string) => void;
   handleRestoreDefaults: () => void;
+  handleRemoveMovement: (logId: string) => void;
   handleQuickCheckIn: (persona: Persona) => void;
   handleResetDay: () => void;
   handleExportBackup: () => void;
@@ -337,6 +338,15 @@ export const useAppState = (): AppState => {
     setPersonas(prev => prev.filter(p => p.id !== id));
   };
 
+  const handleRemoveMovement = (logId: string) => {
+    // 1. Remove the log from the logs array
+    setLogs(prev => prev.filter(l => l.id !== logId));
+
+    // 2. If the removed log was an active Entrada, also remove from activeInside
+    //    (ActiveCheckIn.id === LogItem.id, so match by ID — no stale closure risk)
+    setActiveInside(prev => prev.filter(s => s.id !== logId));
+  };
+
   const handleImportedPersonas = (incoming: Persona[]) => {
     setPersonas(prev => {
       const map = new Map<string, Persona>();
@@ -496,6 +506,7 @@ export const useAppState = (): AppState => {
     handleImportedPersonas,
     handleUpdatePersona,
     handleRemovePersona,
+    handleRemoveMovement,
     handleRestoreDefaults,
     handleQuickCheckIn,
     handleResetDay,
