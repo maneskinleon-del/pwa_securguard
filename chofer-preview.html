@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview — Editar/Eliminar Choferes (SecurGuard)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:#0b1326; color:#dae2fd; font-family:'Inter','Segoe UI',system-ui,sans-serif; padding:16px 0 60px; }
+  .page-note { max-width:375px; margin:0 auto 18px; padding:12px 14px; background:#131b2e; border:1px solid #2d3449; border-radius:12px; font-size:11px; color:#8b93a7; line-height:1.5; }
+  .page-note strong { color:#dae2fd; }
+  .section-title { max-width:375px; margin:22px auto 8px; padding:0 4px; font-size:12px; font-weight:700; letter-spacing:.5px; color:#818cf8; text-transform:uppercase; }
+  .section-sub { max-width:375px; margin:0 auto 10px; padding:0 4px; font-size:10px; color:#8b93a7; }
+  .phone { width:375px; margin:0 auto; background:#111a2e; border:1px solid #2d3449; border-radius:16px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  .phone-head { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#171f33; border-bottom:1px solid #2d3449; }
+  .phone-head h3 { font-size:14px; font-weight:600; color:#dae2fd; }
+  .chip { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; letter-spacing:.3px; }
+  .chip-a { background:rgba(129,140,248,.15); color:#818cf8; border:1px solid rgba(129,140,248,.35); }
+  .chip-b { background:rgba(52,211,153,.12); color:#34d399; border:1px solid rgba(52,211,153,.3); }
+  .chip-c { background:rgba(251,146,60,.12); color:#fb923c; border:1px solid rgba(251,146,60,.3); }
+  /* Selector abierto */
+  .picker { background:#0a101f; border:1px solid #2d3449; border-radius:12px; overflow:hidden; margin:0 14px; }
+  .search { position:relative; padding:8px; border-bottom:1px solid #2d3449; }
+  .search input { width:100%; background:#020617; border:1px solid #1e293b; border-radius:8px; padding:7px 10px 7px 30px; font-size:11px; color:#fff; outline:none; }
+  .search input::placeholder { color:#475569; }
+  .search svg { position:absolute; left:17px; top:50%; transform:translateY(-50%); width:12px; height:12px; stroke:#64748b; }
+  .list { max-height:300px; overflow-y:auto; }
+  .item { display:flex; align-items:center; gap:8px; padding:9px 10px; border-bottom:1px solid rgba(30,41,59,.4); }
+  .item:last-child { border-bottom:none; }
+  .item-info { flex:1; min-width:0; }
+  .item-name { font-size:11px; font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .item-meta { font-size:9px; color:#64748b; font-family:'JetBrains Mono',monospace; margin-top:1px; }
+  .plate-tag { font-size:8px; padding:2px 5px; border-radius:4px; background:#1e293b; color:#94a3b8; font-family:monospace; white-space:nowrap; }
+  .off-tag { font-size:7px; padding:2px 4px; border-radius:4px; background:rgba(244,63,94,.1); color:#fb7185; border:1px solid rgba(244,63,94,.25); font-weight:700; white-space:nowrap; }
+  /* Botones */
+  .icon-btn { width:26px; height:26px; border:none; border-radius:7px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .15s; }
+  .icon-btn svg { width:13px; height:13px; }
+  .icon-toggle-on { background:transparent; color:#fb7185; }
+  .icon-toggle-off { background:transparent; color:#34d399; }
+  .icon-edit { background:transparent; color:#94a3b8; }
+  .icon-edit:active { background:#1e293b; color:#cbd5e1; }
+  .icon-del { background:transparent; color:#64748b; }
+  .icon-del:active { background:rgba(244,63,94,.12); color:#fb7185; }
+  .icon-more { background:transparent; color:#94a3b8; }
+  .divider-btn { width:100%; padding:8px; font-size:9px; color:#64748b; background:none; border:none; border-top:1px solid rgba(30,41,59,.4); cursor:pointer; }
+  .add-btn { width:100%; padding:9px; font-size:9px; font-weight:700; color:#818cf8; background:none; border:none; border-top:1px solid rgba(30,41,59,.4); cursor:pointer; }
+  /* Variante C: mini menu desplegado (flotante, no empuja la fila) */
+  .mini-menu { display:flex; flex-direction:column; background:#0f172a; border:1px solid #334155; border-radius:8px; overflow:hidden; position:absolute; right:8px; top:34px; z-index:10; box-shadow:0 8px 24px rgba(0,0,0,.5); min-width:140px; }
+  .mini-menu button { display:flex; align-items:center; gap:6px; padding:7px 10px; font-size:10px; color:#cbd5e1; background:none; border:none; border-bottom:1px solid rgba(51,65,85,.4); cursor:pointer; text-align:left; }
+  .mini-menu button:last-child { border-bottom:none; }
+  .mini-menu button svg { width:12px; height:12px; }
+  .mini-menu button.danger { color:#fb7185; }
+  .footer { max-width:375px; margin:14px auto 0; padding:0 4px; font-size:10px; color:#8b93a7; line-height:1.5; }
+  .footer code { color:#818cf8; }
+</style>
+</head>
+<body>
+
+  <div class="page-note">
+    <strong>Vista previa a 375px (móvil).</strong> Esta es una maqueta del listado de choferes con las 3 opciones de diseño. Nadie ha sido editado/eliminado — solo es para que elijas cuál se ve mejor. Desliza para comparar.
+  </div>
+
+  <!-- ==================== VARIANTE A: ACTUAL ==================== -->
+  <div class="section-title">Variante A — Actual (sin editar/eliminar)</div>
+  <div class="section-sub">Solo toggle desactivar/reactivar. Referencia: así se ve hoy la app.</div>
+  <div class="phone">
+    <div class="phone-head"><h3>Nuevo Registro de Acceso</h3><span class="chip chip-a">CAMION</span></div>
+    <div style="height:8px"></div>
+    <div class="picker">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input value="" placeholder="Buscar chofer por nombre, RUT o patente...">
+      </div>
+      <div class="list">
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">Juan Pérez Gutiérrez</div>
+            <div class="item-meta">15.234.678-3 • HL-90-88</div>
+          </div>
+          <span class="plate-tag">HL-90-88</span>
+          <button class="icon-btn icon-toggle-on" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        </div>
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">María Rojas Silva</div>
+            <div class="item-meta">18.902.445-1 • GP-45-67</div>
+          </div>
+          <span class="plate-tag">GP-45-67</span>
+          <button class="icon-btn icon-toggle-on" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        </div>
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">Carlos Fuentes (ex-chofer)</div>
+            <div class="item-meta">13.111.220-9 • GX-77-01</div>
+          </div>
+          <span class="plate-tag">GX-77-01</span>
+          <span class="off-tag">INACTIVO</span>
+          <button class="icon-btn icon-toggle-off" title="Reactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="8" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        </div>
+      </div>
+      <button class="divider-btn">Mostrar inactivos (1)</button>
+      <button class="add-btn">+ Agregar nuevo chofer</button>
+    </div>
+    <div style="height:14px"></div>
+  </div>
+
+  <!-- ==================== VARIANTE B: COMPACTA ==================== -->
+  <div class="section-title">Variante B — Iconos inline (lápiz + papelera)</div>
+  <div class="section-sub">Botones pequeños de 26px a la derecha de cada fila. Toca el lápiz para editar, la papelera para eliminar (pide confirmación).</div>
+  <div class="phone">
+    <div class="phone-head"><h3>Nuevo Registro de Acceso</h3><span class="chip chip-b">CAMION</span></div>
+    <div style="height:8px"></div>
+    <div class="picker">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input value="" placeholder="Buscar chofer por nombre, RUT o patente...">
+      </div>
+      <div class="list">
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">Juan Pérez Gutiérrez</div>
+            <div class="item-meta">15.234.678-3 • HL-90-88</div>
+          </div>
+          <button class="icon-btn icon-edit" title="Editar chofer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+          <button class="icon-btn icon-del" title="Eliminar chofer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+          <button class="icon-btn icon-toggle-on" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        </div>
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">María Rojas Silva</div>
+            <div class="item-meta">18.902.445-1 • GP-45-67</div>
+          </div>
+          <button class="icon-btn icon-edit" title="Editar chofer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+          <button class="icon-btn icon-del" title="Eliminar chofer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+          <button class="icon-btn icon-toggle-on" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        </div>
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">Carlos Fuentes (ex-chofer)</div>
+            <div class="item-meta">13.111.220-9 • GX-77-01</div>
+          </div>
+          <button class="icon-btn icon-edit" title="Editar chofer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+          <button class="icon-btn icon-del" title="Eliminar chofer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+          <span class="off-tag">INACTIVO</span>
+          <button class="icon-btn icon-toggle-off" title="Reactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="8" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        </div>
+      </div>
+      <button class="divider-btn">Mostrar inactivos (1)</button>
+      <button class="add-btn">+ Agregar nuevo chofer</button>
+    </div>
+    <div style="height:14px"></div>
+  </div>
+
+  <!-- ==================== VARIANTE C: MENU 3 PUNTOS ==================== -->
+  <div class="section-title">Variante C — Menú "•••" (acciones ocultas)</div>
+  <div class="section-sub">Cada fila queda igual de limpia que hoy. El botón "•••" abre un mini-menú con Editar / Eliminar. Nada visible hasta que tocas.</div>
+  <div class="phone">
+    <div class="phone-head"><h3>Nuevo Registro de Acceso</h3><span class="chip chip-c">CAMION</span></div>
+    <div style="height:8px"></div>
+    <div class="picker">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input value="" placeholder="Buscar chofer por nombre, RUT o patente...">
+      </div>
+      <div class="list">
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">Juan Pérez Gutiérrez</div>
+            <div class="item-meta">15.234.678-3 • HL-90-88</div>
+          </div>
+          <span class="plate-tag">HL-90-88</span>
+          <button class="icon-btn icon-toggle-on" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+          <button class="icon-btn icon-more" title="Más acciones"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+        </div>
+        <div class="item" style="position:relative">
+          <div class="item-info">
+            <div class="item-name">María Rojas Silva</div>
+            <div class="item-meta">18.902.445-1 • GP-45-67</div>
+          </div>
+          <span class="plate-tag">GP-45-67</span>
+          <button class="icon-btn icon-toggle-on" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+          <button class="icon-btn icon-more" title="Más acciones"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+          <!-- mini menu flotante desplegado -->
+          <div class="mini-menu">
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Editar chofer</button>
+            <button class="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Eliminar chofer</button>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-info">
+            <div class="item-name">Carlos Fuentes (ex-chofer)</div>
+            <div class="item-meta">13.111.220-9 • GX-77-01</div>
+          </div>
+          <span class="plate-tag">GX-77-01</span>
+          <span class="off-tag">INACTIVO</span>
+          <button class="icon-btn icon-toggle-off" title="Reactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="8" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+          <button class="icon-btn icon-more" title="Más acciones"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+        </div>
+      </div>
+      <button class="divider-btn">Mostrar inactivos (1)</button>
+      <button class="add-btn">+ Agregar nuevo chofer</button>
+    </div>
+    <div style="height:14px"></div>
+  </div>
+
+  <div class="footer">
+    <p><strong>Resumen:</strong></p>
+    <p>• <strong>A</strong> — como está hoy: solo toggle. No se puede editar/eliminar.</p>
+    <p>• <strong>B</strong> — 2 iconos extra por fila (+26px aprox. de ancho). Más rápido, un poco más cargado.</p>
+    <p>• <strong>C</strong> — la fila no cambia visualmente; las acciones quedan en "•••". Más limpio, un toque extra para editar/eliminar.</p>
+    <p style="margin-top:8px">Abrir directo: <code>pwa_securguard/chofer-preview.html</code> en el navegador del teléfono.</p>
+  </div>
+
+</body>
+</html>
