@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Download, AlertTriangle, RefreshCw, Lock, Unlock, LogIn, LogOut, Truck, Sparkles, User, CheckCircle, Database, Users, Pencil } from 'lucide-react';
+import { Search, Download, AlertTriangle, RefreshCw, Lock, Unlock, LogIn, LogOut, Truck, User, Database, Users, Pencil, Trash2, History } from 'lucide-react';
 import { LogItem, AccessType, Persona, ActiveCheckIn } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { csvDownload } from '../utils/csv';
@@ -19,6 +19,7 @@ interface LogsTabProps {
   onOpenIncident: () => void;
   onOpenHandover: () => void;
   onEditPersona: (persona: Persona) => void;
+  onRemoveMovement: (logId: string) => void;
   emergencyLock: boolean;
   onToggleLock: () => void;
 }
@@ -33,6 +34,7 @@ export function LogsTab({
   onOpenIncident,
   onOpenHandover,
   onEditPersona,
+  onRemoveMovement,
   emergencyLock,
   onToggleLock
 }: LogsTabProps) {
@@ -165,6 +167,74 @@ export function LogsTab({
           >
             Camiones
           </button>
+        </div>
+      </section>
+
+      {/* Todos los movimientos — individual log entries with delete */}
+      <section className="bg-[#0f172a] border border-slate-800 rounded-[2rem] p-6 space-y-4 shadow-lg">
+        <div className="flex items-center justify-between border-b border-slate-800/50 pb-3">
+          <div className="flex items-center gap-1.5">
+            <History className="w-4 h-4 text-slate-400" />
+            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Todos los movimientos</h2>
+          </div>
+          <span className="bg-rose-500/10 border border-rose-500/20 px-2.5 py-0.5 rounded-full text-[9px] font-bold text-rose-400">
+            {logs.length} registros
+          </span>
+        </div>
+
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          {logs.length === 0 ? (
+            <div className="p-8 text-center bg-[#020617] rounded-xl border border-slate-800 text-slate-500 text-xs">
+              No hay movimientos registrados hoy.
+            </div>
+          ) : (
+            logs.map((log, index) => (
+              <div
+                key={log.id || `log-${index}`}
+                className="flex items-center justify-between p-3 bg-[#020617] hover:bg-slate-900 transition-all rounded-xl border border-slate-800/40"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-mono font-bold text-[#818cf8]">{log.time}</span>
+                    <span className="text-[8px] font-bold text-slate-500 uppercase">{log.date}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {log.action === 'Entrada' ? (
+                      <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                    )}
+                    <div>
+                      <h3 className="font-bold text-xs text-white leading-tight">{log.name}</h3>
+                      <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                        <span className="font-medium text-slate-500">{log.rut}</span>
+                        <span className={`px-1 py-0.2 rounded text-[8px] font-bold uppercase ${
+                          log.action === 'Entrada'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        }`}> {log.action} </span>
+                        {log.duration && (
+                          <span className="text-[8px] text-slate-500">({log.duration})</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm('¿Eliminar este movimiento?')) {
+                      onRemoveMovement(log.id);
+                    }
+                  }}
+                  className="p-1.5 rounded-lg bg-rose-600/10 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors cursor-pointer border border-rose-500/20 shrink-0"
+                  title="Eliminar movimiento"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </section>
 

@@ -30,8 +30,8 @@ export default function App() {
     handleSaveIncident,
     handleImportedPersonas,
     handleQuickCheckIn,
-    handleResetDay,
     handleRemoveMovement,
+    handleResetDay,
     handleExportBackup,
     handleFactoryReset,
     handleResolveIncident,
@@ -166,6 +166,7 @@ export default function App() {
             onOpenIncident={() => setIsIncidentOpen(true)}
             onOpenHandover={() => setIsHandoverOpen(true)}
             onEditPersona={(persona) => { setEditingPersona(persona); setIsEditPersonaOpen(true); }}
+            onRemoveMovement={handleRemoveMovement}
             emergencyLock={emergencyLock}
             onToggleLock={() => setEmergencyLock(!emergencyLock)}
           />
@@ -180,7 +181,7 @@ export default function App() {
             incidents={incidents}
             onOpenImport={() => setIsImportOpen(true)}
             onResetDay={handleResetDay}
-            onDeleteAll={handleResetDay}
+            onDeleteAll={handleFactoryReset}
             onImportPersonas={handleImportedPersonas}
             onRestoreDefaults={handleRestoreDefaults}
             onEditPersona={(persona) => { setEditingPersona(persona); setIsEditPersonaOpen(true); }}

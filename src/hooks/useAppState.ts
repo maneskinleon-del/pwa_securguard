@@ -24,8 +24,9 @@ const readArray = (key: string): any[] | null => {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    // Treat empty arrays as no-data so defaults are loaded on fresh/cleared state
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    // [] (JSON guardado como vacío) es un borrado legítimo y debe persistir;
+    // solo null/ausencia de clave dispara los datos demo de primer arranque.
+    return Array.isArray(parsed) ? parsed : null;
   } catch (e) {
     console.error(`[rehydrate] No se pudo parsear ${key}; usando valores por defecto.`, e);
     return null;
@@ -121,9 +122,9 @@ export interface AppState {
   handleUpdatePersona: (updated: Persona) => void;
   handleRemovePersona: (id: string) => void;
   handleRestoreDefaults: () => void;
+  handleRemoveMovement: (logId: string) => void;
   handleQuickCheckIn: (persona: Persona) => void;
   handleResetDay: () => void;
-  handleRemoveMovement: (id: string) => void;
   handleExportBackup: () => void;
   handleFactoryReset: () => void;
   handleResolveIncident: (id: string) => void;
@@ -445,11 +446,10 @@ export const useAppState = (): AppState => {
     setLogs([]);
     setIncidents([]);
     setActiveInside([]);
-    setPersonas([]);
+    // Do NOT clear setPersonas()! This preserves master base
     localStorage.removeItem('securguard_logs');
     localStorage.removeItem('securguard_incidents');
     localStorage.removeItem('securguard_active_inside');
-    localStorage.removeItem('securguard_personas');
   };
 
   /**
@@ -495,11 +495,11 @@ export const useAppState = (): AppState => {
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
-  // Factory reset: wipe everything including the persona master base
+  // Factory reset: wipe EVERYTHING, incl. the persona master base
   const handleFactoryReset = () => {
     setLogs([]);
     setIncidents([]);
-    setPersonas(DEFAULT_PERSONAS);
+    setPersonas([]);
     setActiveInside([]);
     localStorage.removeItem('securguard_logs');
     localStorage.removeItem('securguard_incidents');
@@ -550,10 +550,10 @@ export const useAppState = (): AppState => {
     handleImportedPersonas,
     handleUpdatePersona,
     handleRemovePersona,
+    handleRemoveMovement,
     handleRestoreDefaults,
     handleQuickCheckIn,
     handleResetDay,
-    handleRemoveMovement,
     handleExportBackup,
     handleFactoryReset,
     handleResolveIncident,
