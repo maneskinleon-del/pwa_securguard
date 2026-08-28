@@ -166,7 +166,6 @@ export default function App() {
             onOpenIncident={() => setIsIncidentOpen(true)}
             onOpenHandover={() => setIsHandoverOpen(true)}
             onEditPersona={(persona) => { setEditingPersona(persona); setIsEditPersonaOpen(true); }}
-            onRemoveMovement={handleRemoveMovement}
             emergencyLock={emergencyLock}
             onToggleLock={() => setEmergencyLock(!emergencyLock)}
           />
