@@ -11,7 +11,7 @@ import { isValidRut, normalizeRut } from '../utils/rut';
 interface RegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (log: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>) => void;
+  onSave: (log: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>, addToPersonas?: boolean) => void;
   initialType?: AccessType;
 }
 
@@ -44,6 +44,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
       return;
     }
     const chosenUrl = avatarPresets.find(p => p.id === avatarPreset)?.url || '';
+    // Pass addToPersonas=true so the person is added to the directory
     onSave({
       name,
       rut: normalizeRut(rut),
@@ -52,7 +53,7 @@ export function RegisterModal({ isOpen, onClose, onSave, initialType = 'VISITANT
       action: 'Entrada',
       unit,
       avatar: chosenUrl
-    });
+    }, true);
     // Reset form
     setName('');
     setRut('');

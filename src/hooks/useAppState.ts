@@ -7,6 +7,7 @@ import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { LogItem, IncidentReport, GuardProfile, AccessType, Persona, ActiveCheckIn } from '../types';
 import { INITIAL_LOGS, INITIAL_INCIDENTS, DEFAULT_GUARD } from '../data/mockData';
 import { getLocalDateISO } from '../utils/datetime';
+import { resolveMovementDeletion } from '../domain/access';
 
 // --- Defensive rehydration helpers (Incidencia A) ---
 // Normalize a RUT for safe comparison without throwing on null/undefined.
@@ -114,7 +115,7 @@ export interface AppState {
   setProfile: Dispatch<SetStateAction<GuardProfile>>;
   // Actions
   handleMarkExit: (idOrRut: string, customExitTime?: string) => void;
-  handleSaveRegister: (newEntry: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>) => void;
+  handleSaveRegister: (newEntry: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>, addToPersonas?: boolean) => void;
   handleSaveIncident: (newIncident: Omit<IncidentReport, 'id' | 'time' | 'date' | 'reporter' | 'gate'>) => void;
   handleImportedPersonas: (incoming: Persona[]) => void;
   handleUpdatePersona: (updated: Persona) => void;
@@ -122,6 +123,7 @@ export interface AppState {
   handleRestoreDefaults: () => void;
   handleQuickCheckIn: (persona: Persona) => void;
   handleResetDay: () => void;
+  handleRemoveMovement: (id: string) => void;
   handleExportBackup: () => void;
   handleFactoryReset: () => void;
   handleResolveIncident: (id: string) => void;
@@ -237,6 +239,7 @@ export const useAppState = (): AppState => {
     }
 
     // Defensive construction of independent permanent Salida log event
+    // Link to original entry via entryId for session reconstruction
     const sessionName = session.name || 'Desconocido';
     const exitLog: LogItem = {
       id: `log-exit-${generateId()}`,
@@ -251,6 +254,8 @@ export const useAppState = (): AppState => {
       status: 'exited',
       duration: durationStr,
       avatar: session.avatar || '',
+      entryId: session.id, // Link to original entry for session pairing
+      entryTimestamp: session.entryTimestamp, // Original entry time for reference
     };
 
     setLogs(prev => [exitLog, ...prev]);
@@ -259,7 +264,7 @@ export const useAppState = (): AppState => {
     setActiveInside(prev => prev.filter(s => s.id !== session.id));
   };
 
-  const handleSaveRegister = (newEntry: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>) => {
+  const handleSaveRegister = (newEntry: Omit<LogItem, 'id' | 'time' | 'date' | 'status'>, addToPersonas = false) => {
     const timestamp = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
     const datestamp = getLocalDateISO();
 
@@ -272,6 +277,7 @@ export const useAppState = (): AppState => {
     const entryId = `log-${generateId()}`;
 
     // 1. Create immutable Entrada log record
+    const entryTimestamp = Date.now();
     const entryLog: LogItem = {
       ...newEntry,
       id: entryId,
@@ -279,6 +285,7 @@ export const useAppState = (): AppState => {
       date: datestamp,
       action: 'Entrada',
       status: 'active',
+      entryTimestamp,
     };
 
     setLogs(prev => [entryLog, ...prev]);
@@ -293,11 +300,35 @@ export const useAppState = (): AppState => {
       unit: newEntry.unit,
       entryTime: timestamp,
       entryDate: datestamp,
-      entryTimestamp: Date.now(),
+      entryTimestamp,
       avatar: newEntry.avatar,
     };
 
     setActiveInside(prev => [newActive, ...prev]);
+
+    // 3. Optionally add to personas directory (for RegisterModal, not for QuickCheckIn)
+    if (addToPersonas) {
+      const newPersona: Persona = {
+        id: `persona-${generateId()}`,
+        name: newEntry.name,
+        rut: newEntry.rut,
+        plate: newEntry.plate,
+        type: newEntry.type,
+        unit: newEntry.unit,
+        avatar: newEntry.avatar,
+      };
+      setPersonas(prev => {
+        // Avoid duplicates by RUT
+        const existingIndex = prev.findIndex(p => normRut(p.rut) === normRut(newPersona.rut));
+        if (existingIndex >= 0) {
+          // Update existing
+          const updated = [...prev];
+          updated[existingIndex] = { ...updated[existingIndex], ...newPersona };
+          return updated;
+        }
+        return [newPersona, ...prev];
+      });
+    }
   };
 
   const handleSaveIncident = (newIncident: Omit<IncidentReport, 'id' | 'time' | 'date' | 'reporter' | 'gate'>) => {
@@ -360,6 +391,7 @@ export const useAppState = (): AppState => {
     }
 
     const entryId = `log-${generateId()}`;
+    const entryTimestamp = Date.now();
 
     // 1. Create immutable Entrada log record
     const entryLog: LogItem = {
@@ -374,6 +406,7 @@ export const useAppState = (): AppState => {
       unit: persona.unit,
       avatar: persona.avatar || '',
       status: 'active',
+      entryTimestamp,
     };
 
     setLogs(prev => [entryLog, ...prev]);
@@ -388,7 +421,7 @@ export const useAppState = (): AppState => {
       unit: persona.unit,
       entryTime: timestamp,
       entryDate: datestamp,
-      entryTimestamp: Date.now(),
+      entryTimestamp,
       avatar: persona.avatar || '',
     };
 
@@ -417,6 +450,27 @@ export const useAppState = (): AppState => {
     localStorage.removeItem('securguard_incidents');
     localStorage.removeItem('securguard_active_inside');
     localStorage.removeItem('securguard_personas');
+  };
+
+  /**
+   * Elimina un movimiento individual (UI: Tab 1, "Actividad & Historial").
+   * La regla de qué borrar vive en el dominio (`resolveMovementDeletion`):
+   * - Salida → solo esa Salida (la Entrada queda como historial).
+   * - Entrada → sesión completa (Entrada + Salidas asociadas por entryId) y,
+   *   si sigue activa, también se quita de activeInside.
+   * NO modifica personas[].
+   */
+  const handleRemoveMovement = (id: string) => {
+    const plan = resolveMovementDeletion(logs, activeInside, id);
+    if (plan.removeLogIds.length === 0) return;
+
+    const removeLogSet = new Set(plan.removeLogIds);
+    const removeActiveSet = new Set(plan.removeActiveIds);
+
+    setLogs(prev => prev.filter(l => !removeLogSet.has(l.id)));
+    if (removeActiveSet.size > 0) {
+      setActiveInside(prev => prev.filter(a => !removeActiveSet.has(a.id)));
+    }
   };
 
   const handleExportBackup = () => {
@@ -499,6 +553,7 @@ export const useAppState = (): AppState => {
     handleRestoreDefaults,
     handleQuickCheckIn,
     handleResetDay,
+    handleRemoveMovement,
     handleExportBackup,
     handleFactoryReset,
     handleResolveIncident,

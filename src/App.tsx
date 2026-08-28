@@ -31,6 +31,7 @@ export default function App() {
     handleImportedPersonas,
     handleQuickCheckIn,
     handleResetDay,
+    handleRemoveMovement,
     handleExportBackup,
     handleFactoryReset,
     handleResolveIncident,
@@ -148,6 +149,7 @@ export default function App() {
             incidents={incidents}
             onMarkExit={handleMarkExit}
             onResetDay={handleResetDay}
+            onRemoveMovement={handleRemoveMovement}
             clock={clock}
             onOpenRegister={() => openRegister('VISITANTE')}
           />

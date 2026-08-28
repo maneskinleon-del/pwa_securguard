@@ -8,6 +8,17 @@ import { Upload, Download, Trash2, ShieldAlert, BarChart2, Users, Check, LogIn, 
 import { LogItem, Persona, ActiveCheckIn, GuardProfile, IncidentReport } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
+import {
+  calculateEntriesToday,
+  calculateLongStayAlerts,
+  calculateHourlyTraffic,
+  findPeakHour,
+  formatHour,
+  HISTOGRAM_BARS,
+  LONG_STAY_THRESHOLD_MS,
+} from '../domain/access';
+import { ChoferesSection } from './ChoferesSection';
+import { useChoferesState } from '../hooks/useChoferesState';
 
 interface PersonasTabProps {
   logs: LogItem[];
@@ -28,10 +39,26 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
   const [confirmClear, setConfirmClear] = useState(false);
   const [copiedSuccess, setCopiedSuccess] = useState(false);
 
-  // Derived metrics from actual log actions and current active occupancy
-  const totalEntriesToday = logs.filter(l => l.action === 'Entrada').length;
-  const currentActiveInside = activeInside.length;
-  const longStayAlerts = activeInside.filter(item => item.type === 'VISITANTE').length; // Dynamic alerts based on current occupancy
+  // Choferes state management
+  const {
+    choferes,
+    addChofer,
+    updateChofer,
+    deactivateChofer,
+    reactivateChofer,
+    removeChofer,
+    resetChoferes,
+  } = useChoferesState();
+
+  // Real derived metrics from domain layer
+  const totalEntriesToday = calculateEntriesToday(logs);
+  const totalActiveCount = activeInside.length; // Total people currently inside
+  const longStayAlerts = calculateLongStayAlerts(activeInside, 'VISITANTE');
+  const hourlyTraffic = calculateHourlyTraffic(logs);
+  const peakHour = findPeakHour(logs);
+  
+  // For histogram: find max value to normalize heights
+  const maxHourlyCount = hourlyTraffic.length > 0 ? Math.max(...hourlyTraffic) : 0;
 
   const handleExportDB = () => {
     try {
@@ -94,7 +121,11 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
             </div>
           </div>
           <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5 mt-2">
-            ↗ 12% <span className="text-slate-500 font-medium">hoy</span>
+            {totalEntriesToday > 0 ? (
+              <>{totalEntriesToday} entradas registradas</>
+            ) : (
+              <span className="text-slate-500">Sin registros hoy</span>
+            )}
           </p>
         </div>
 
@@ -106,7 +137,7 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
               <span className="w-2 h-2 rounded-full bg-emerald-450 animate-pulse"></span>
             </div>
             <div className="text-3xl font-black text-white mt-2 tracking-tight leading-none">
-              {currentActiveInside}
+              {totalActiveCount}
             </div>
           </div>
           <p className="text-[10px] text-slate-400 font-bold mt-2 flex items-center gap-1">
@@ -121,20 +152,42 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
             <BarChart2 className="w-4 h-4 text-[#818cf8]" />
           </div>
           
-          {/* Micro histogram bars custom */}
+          {/* Real histogram calculated from today's entries */}
           <div className="flex items-end justify-between h-14 mt-1 px-1">
-            <div className="w-4 h-[25%] bg-slate-800 rounded-md transition-all hover:bg-slate-700"></div>
-            <div className="w-4 h-[45%] bg-slate-800 rounded-md transition-all hover:bg-slate-700"></div>
-            <div className="w-4 h-[95%] bg-gradient-to-t from-indigo-500 to-violet-600 rounded-md shadow-lg shadow-indigo-500/20"></div>
-            <div className="w-4 h-[65%] bg-slate-800 rounded-md transition-all hover:bg-slate-700"></div>
-            <div className="w-4 h-[35%] bg-slate-800 rounded-md transition-all hover:bg-slate-700"></div>
-            <div className="w-4 h-[80%] bg-slate-800/80 rounded-md transition-all hover:bg-slate-700"></div>
-            <div className="w-4 h-[20%] bg-slate-800 rounded-md transition-all hover:bg-slate-700"></div>
+            {hourlyTraffic.map((count, hour) => {
+              // Show every 3 hours for readability
+              const showLabel = hour % 3 === 0;
+              const isPeak = peakHour && hour === peakHour.hour;
+              const heightPercent = maxHourlyCount > 0 ? (count / maxHourlyCount) * 100 : 0;
+              
+              return (
+                <div key={hour} className="flex flex-col items-center gap-1 flex-1">
+                  <div 
+                    className={`w-full rounded-md transition-all ${
+                      isPeak 
+                        ? 'bg-gradient-to-t from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20' 
+                        : 'bg-slate-800 hover:bg-slate-700'
+                    }`}
+                    style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                    title={`${formatHour(hour)}: ${count} entradas`}
+                  />
+                  {showLabel && (
+                    <span className="text-[8px] text-slate-500 font-bold">{formatHour(hour)}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="flex justify-between text-[9px] text-slate-500 font-bold mt-2 px-1">
-            <span>08:00</span>
-            <span className="text-indigo-400">Pico (14:00)</span>
-            <span>22:00</span>
+            <span>00:00</span>
+            {peakHour ? (
+              <span className="text-indigo-400">
+                Pico ({formatHour(peakHour.hour)}) · {peakHour.count} entradas
+              </span>
+            ) : (
+              <span className="text-slate-500">Sin datos de pico</span>
+            )}
+            <span>23:00</span>
           </div>
         </div>
 
@@ -144,14 +197,18 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
             <div>
               <div className="flex items-center gap-1 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                 <span>Alertas Permanencia Estacionada</span>
-                <AlarmClock className="w-3.5 h-3.5 text-amber-405 animate-bounce" />
+                <AlarmClock className={`w-3.5 h-3.5 ${longStayAlerts > 0 ? 'text-amber-500 animate-bounce' : 'text-slate-500'}`} />
               </div>
               <div className="text-xl font-black text-amber-500 mt-1.5 tracking-tight flex items-center gap-1.5">
-                {longStayAlerts} <span className="text-xs text-slate-400 font-medium">visitas críticas</span>
+                {longStayAlerts > 0 ? (
+                  <>{longStayAlerts} <span className="text-xs text-slate-400 font-medium">visitantes &gt; {LONG_STAY_THRESHOLD_MS / 60000}min</span></>
+                ) : (
+                  <span className="text-emerald-400 text-sm font-bold">Sin alertas</span>
+                )}
               </div>
             </div>
             <p className="text-[9px] bg-amber-500/10 border border-amber-500/20 text-amber-450 font-bold px-2 py-1 rounded-full uppercase">
-              &gt; 1h en recinto
+              &gt; {LONG_STAY_THRESHOLD_MS / 60000}min en recinto
             </p>
           </div>
         </div>
@@ -256,6 +313,19 @@ export function PersonasTab({ logs, activeInside = [], personas, profile, incide
             })
           )}
         </div>
+      </section>
+
+      {/* Choferes Section - Integrated from separate module */}
+      <section className="space-y-4">
+        <ChoferesSection
+          choferes={choferes}
+          onAddChofer={addChofer}
+          onUpdateChofer={updateChofer}
+          onDeactivateChofer={deactivateChofer}
+          onReactivateChofer={reactivateChofer}
+          onRemoveChofer={removeChofer}
+          onResetChoferes={resetChoferes}
+        />
       </section>
 
       {/* DB controller list on bottom as a sleek Bento box */}

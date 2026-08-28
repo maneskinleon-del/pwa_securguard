@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Loader2, CheckCircle2, Shield, Bell, LogIn, ExternalLink, Download, History } from 'lucide-react';
+import { Search, Loader2, CheckCircle2, Shield, Bell, LogIn, ExternalLink, Download, History, Trash2 } from 'lucide-react';
 import { LogItem, ActiveCheckIn, GuardProfile, IncidentReport, Persona } from '../types';
 import { getLocalDateISO } from '../utils/datetime';
 import { buildSecurityReportCSV, downloadSecurityReportCSV } from '../utils/report';
@@ -16,12 +16,13 @@ interface ControlTabProps {
   profile: GuardProfile;
   incidents: IncidentReport[];
   onMarkExit: (id: string) => void;
+  onRemoveMovement: (id: string) => void;
   onOpenRegister: () => void;
   onResetDay?: () => void;
   clock: string;
 }
 
-export function ControlTab({ logs, activeInside, personas, profile, incidents, onMarkExit, onOpenRegister, onResetDay, clock }: ControlTabProps) {
+export function ControlTab({ logs, activeInside, personas, profile, incidents, onMarkExit, onRemoveMovement, onOpenRegister, onResetDay, clock }: ControlTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingExits, setLoadingExits] = useState<{ [key: string]: boolean }>({});
   const [recordedExits, setRecordedExits] = useState<{ [key: string]: boolean }>({});
@@ -115,6 +116,17 @@ export function ControlTab({ logs, activeInside, personas, profile, incidents, o
       downloadSecurityReportCSV(csvContent, `SecurGuard-AuditoriaAccesos-${getLocalDateISO()}.csv`);
     } catch (e) {
       alert('Error exportando registro de accesos CSV.');
+    }
+  };
+
+  // Borrado individual de un movimiento (regla en domain/access.ts):
+  // Salida → solo ella; Entrada → sesión completa (Entrada + Salidas asociadas).
+  const handleRemoveClick = (log: LogItem) => {
+    const sessionMsg = log.action === 'Entrada'
+      ? 'Se eliminará la sesión completa: esta Entrada y sus Salidas asociadas.'
+      : 'Se eliminará solo esta Salida; la Entrada permanecerá en el historial.';
+    if (window.confirm(`¿Eliminar el movimiento de "${log.name}"?\n${sessionMsg}`)) {
+      onRemoveMovement(log.id);
     }
   };
 
@@ -364,6 +376,15 @@ export function ControlTab({ logs, activeInside, personas, profile, incidents, o
                         {log.action === 'Entrada' ? 'INGRESÓ' : 'SALIÓ'}
                       </span>
                     )}
+
+                    <button
+                      onClick={() => handleRemoveClick(log)}
+                      className="p-1.5 rounded-md bg-[#0a0f24] border border-slate-800/60 hover:bg-red-950/40 hover:border-red-900/60 text-slate-600 hover:text-red-400 transition-colors cursor-pointer"
+                      title="Eliminar movimiento"
+                      aria-label={`Eliminar movimiento de ${log.name}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               );
