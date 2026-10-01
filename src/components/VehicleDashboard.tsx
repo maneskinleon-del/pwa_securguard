@@ -168,12 +168,32 @@ export function VehicleDashboard({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-[10px] font-mono text-slate-400">
-                    {v.entryTime}
-                  </span>
-                  <span className="text-[9px] text-emerald-400 font-bold">
-                    {formatDuration(v.entryTimestamp)}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {v.entryTime}
+                    </span>
+                    <span className="text-[9px] text-emerald-400 font-bold">
+                      {formatDuration(v.entryTimestamp)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const ok = onVehicleExit(v.plate || '', v.name);
+                      if (ok) {
+                        const timeStr = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+                        onShowToast({
+                          message: 'Salida ' + formatPlateForDisplay(v.plate || '') + ' · ' + timeStr,
+                          type: 'success',
+                        });
+                      } else {
+                        onShowToast({ message: 'No se pudo registrar la salida.', type: 'alert' });
+                      }
+                    }}
+                    className="ml-2 p-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 active:scale-95 transition-all flex-shrink-0"
+                    title="Dar salida a este vehículo"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -229,14 +249,18 @@ export function VehicleDashboard({
                     </div>
                   </div>
                 </div>
+                {/* Eliminar movimiento oculto: solo en menú secundario (evita confusión con SALIDA) */}
                 <button
-                  onClick={() => onRemoveMovement(log.id)}
-                  className="p-1 rounded hover:bg-slate-700/30 text-slate-500 hover:text-rose-400 transition-colors flex-shrink-0"
-                  title="Eliminar movimiento"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm('¿Eliminar el movimiento ' + formatPlateForDisplay(log.plate || '') + '?')) {
+                      onRemoveMovement(log.id);
+                    }
+                  }}
+                  className="p-1 rounded hover:bg-slate-800/30 text-slate-600 hover:text-slate-400 transition-colors flex-shrink-0 opacity-30 hover:opacity-100"
+                  title="Eliminar movimiento (acción secundaria)"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <span className="text-[9px] font-bold">…</span>
                 </button>
               </div>
             ))}
