@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type AccessType = 'CONTRATISTA' | 'VISITANTE' | 'ENTREGA' | 'CAMION';
+export type AccessType = 'CONTRATISTA' | 'VISITANTE' | 'ENTREGA' | 'CAMION' | 'VEHICULO';
 
 export interface LogItem {
   id: string;

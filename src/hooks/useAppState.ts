@@ -8,6 +8,7 @@ import { LogItem, IncidentReport, GuardProfile, AccessType, Persona, ActiveCheck
 import { INITIAL_LOGS, INITIAL_INCIDENTS, DEFAULT_GUARD } from '../data/mockData';
 import { getLocalDateISO } from '../utils/datetime';
 import { resolveMovementDeletion } from '../domain/access';
+import { normalizePlate, isValidPlate } from '../domain/plate';
 
 // --- Defensive rehydration helpers (Incidencia A) ---
 // Normalize a RUT for safe comparison without throwing on null/undefined.
@@ -129,6 +130,12 @@ export interface AppState {
   handleFactoryReset: () => void;
   handleResolveIncident: (id: string) => void;
   handleCompleteHandover: (nextGuardName: string) => void;
+  // --- Vehicle quick-register actions (Phase 4) ---
+  isVehicleInside: (plate: string) => boolean;
+  findVehicleSession: (plate: string) => ActiveCheckIn | undefined;
+  normPlate: (input?: string | null) => string;
+  handleVehicleEntry: (plate: string, company?: string) => LogItem | null;
+  handleVehicleExit: (plate: string, company?: string) => boolean;
 }
 
 /**
@@ -537,6 +544,134 @@ export const useAppState = (): AppState => {
     setLogs(prev => [handoverLog, ...prev]);
   };
 
+  // --- Vehicle quick-register actions (Phase 4) ---
+  //
+  // Los vehículos se identifican por patente canónica, no por RUT. Reutilizan
+  // la misma infraestructura de persistencia (logs + activeInside + localStorage
+  // sincronizado) pero con lógica de emparejamiento por patente.
+
+  /** Normaliza RUT y patente para comparaciones seguras. */
+  const normPlate = (v?: string | null): string => normalizePlate(v);
+
+  /**
+   * Busca una sesión activa de vehículo por patente (comparación canónica).
+   * Un vehículo rápido NO tiene RUT asociado (rut === ''), por lo que el
+   * emparejamiento se hace exclusivamente por la patente canónica.
+   */
+  const findVehicleSession = (plateInput: string): ActiveCheckIn | undefined => {
+    const target = normPlate(plateInput);
+    if (target === '') return undefined;
+    return activeInside.find(
+      s => s.rut === '' && normPlate(s.plate) === target
+    );
+  };
+
+  /** ¿Está actualmente dentro un vehículo con esta patente? */
+  const isVehicleInside = (plateInput: string): boolean => {
+    return !!findVehicleSession(plateInput);
+  };
+
+    /**
+   * Registro rápido de ENTRADA de vehículo por patente.
+   *
+   * Semántica de duplicados (CASO 3): si el vehículo ya está dentro, se
+   * cierra su sesión anterior (Salida) antes de abrir una nueva (Entrada),
+   * reutilizando exactamente la regla que `handleSaveRegister` aplica para
+   * personas. Así el historial queda consistente: Entrada → Salida → Entrada.
+   *
+   * El `company` (empresa) es opcional. Se almacena en el campo `name` del
+   * LogItem/ActiveCheckIn, de modo que la misma infraestructura de display
+   * (que ya muestra `name`) funcione sin cambios en componentes existentes.
+   * Si no se provee empresa, se usa 'Vehículo' como nombre genérico.
+   *
+   * Reutiliza los efectos de localStorage de useAppState: al modificar
+   * `logs` y `activeInside` se persiste automáticamente.
+   */
+  const handleVehicleEntry = (plateInput: string, company?: string): LogItem | null => {
+    const plate = normPlate(plateInput);
+    if (!isValidPlate(plate)) {
+      console.error('[handleVehicleEntry] Patente inválida:', plateInput);
+      return null;
+    }
+
+    // Si ya está dentro, cerramos la sesión previa (duplicado de entrada)
+    const existing = findVehicleSession(plate);
+    if (existing) {
+      handleMarkExit(existing.id);
+    }
+
+    const timestamp = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    const datestamp = getLocalDateISO();
+    const entryId = `log-${generateId()}`;
+    const entryTimestamp = Date.now();
+    const companyName = company && company.trim() ? company.trim() : 'Vehículo';
+
+    const entryLog: LogItem = {
+      id: entryId,
+      name: companyName,
+      rut: '',
+      plate,
+      type: 'VEHICULO',
+      action: 'Entrada',
+      time: timestamp,
+      date: datestamp,
+      unit: company ? `Empresa: ${companyName}` : 'Ingreso por patente',
+      avatar: '',
+      status: 'active',
+      entryTimestamp,
+    };
+
+    setLogs(prev => [entryLog, ...prev]);
+
+    const newActive: ActiveCheckIn = {
+      id: entryId,
+      name: companyName,
+      rut: '',
+      plate,
+      type: 'VEHICULO',
+      unit: entryLog.unit,
+      entryTime: timestamp,
+      entryDate: datestamp,
+      entryTimestamp,
+      avatar: '',
+    };
+    setActiveInside(prev => [newActive, ...prev]);
+
+    // Confirmación auditiva si el guardia habilitó alertas de sonido
+    if (profile.soundAlerts && 'speechSynthesis' in window) {
+      try {
+        const utterance = new SpeechSynthesisUtterance(`Entrada ${plate}`);
+        utterance.lang = 'es-CL';
+        utterance.rate = 1.2;
+        window.speechSynthesis.speak(utterance);
+      } catch (_) { /* sandbox: ignorado */ }
+    }
+
+    return entryLog;
+  };
+
+  /**
+   * Registro rápido de SALIDA de vehículo por patente.
+   * Busca la sesión activa por patente canónica y la cierra.
+   * El `company` es opcional y no afecta la búsqueda (que se hace por patente).
+   * Devuelve `true` si se procesó la salida, `false` si el vehículo
+   * no estaba dentro (caso: SALIDA sin ENTRADA previa).
+   */
+  const handleVehicleExit = (plateInput: string, _company?: string): boolean => {
+    const plate = normPlate(plateInput);
+    if (!isValidPlate(plate)) {
+      console.error('[handleVehicleExit] Patente inválida:', plateInput);
+      return false;
+    }
+    const session = findVehicleSession(plate);
+    if (!session) {
+      console.warn('[handleVehicleExit] Vehículo no está dentro:', plate);
+      return false;
+    }
+    handleMarkExit(session.id);
+    return true;
+  };
+
   return {
     logs,
     activeInside,
@@ -558,5 +693,10 @@ export const useAppState = (): AppState => {
     handleFactoryReset,
     handleResolveIncident,
     handleCompleteHandover,
+    normPlate,
+    isVehicleInside,
+    findVehicleSession,
+    handleVehicleEntry,
+    handleVehicleExit,
   };
 };

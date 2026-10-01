@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Bell, Plus, Siren, Settings2, History, Users, MonitorSmartphone } from 'lucide-react';
 import { AccessType, Persona } from './types';
-import { ControlTab } from './components/ControlTab';
+import { VehicleDashboard } from './components/VehicleDashboard';
 import { LogsTab } from './components/LogsTab';
 import { PersonasTab } from './components/PersonasTab';
 import { SettingsTab } from './components/SettingsTab';
@@ -39,6 +39,9 @@ export default function App() {
     handleUpdatePersona,
     handleRemovePersona,
     handleRestoreDefaults,
+    isVehicleInside,
+    handleVehicleEntry,
+    handleVehicleExit,
   } = useAppState();
 
   // Modal display toggles
@@ -49,6 +52,9 @@ export default function App() {
   const [isHandoverOpen, setIsHandoverOpen] = useState(false);
   const [isEditPersonaOpen, setIsEditPersonaOpen] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+
+  // Panel de registro rápido de vehículos (toggle con el botón flotante de patente)
+  const [showVehiclePanel, setShowVehiclePanel] = useState(false);
 
   // Emergency lockdown toggle (estado de UI, no persiste en profile)
   const [emergencyLock, setEmergencyLock] = useState<boolean>(() => {
@@ -141,17 +147,24 @@ export default function App() {
       {/* Main Container screen wrapper */}
       <main className="max-w-xl mx-auto px-4 pt-5">
         {currentTab === 'control' && (
-          <ControlTab
+          <VehicleDashboard
             logs={logs}
             activeInside={activeInside}
             personas={personas}
             profile={profile}
             incidents={incidents}
+            isVehicleInside={isVehicleInside}
+            onVehicleEntry={handleVehicleEntry}
+            onVehicleExit={handleVehicleExit}
             onMarkExit={handleMarkExit}
-            onResetDay={handleResetDay}
             onRemoveMovement={handleRemoveMovement}
-            clock={clock}
             onOpenRegister={() => openRegister('VISITANTE')}
+            onResetDay={handleResetDay}
+            onExportBackup={handleExportBackup}
+            clock={clock}
+            onShowToast={(t) => setToast(t)}
+            onOpenPersonas={() => setCurrentTab('personas')}
+            onOpenSettings={() => setCurrentTab('settings')}
           />
         )}
 
